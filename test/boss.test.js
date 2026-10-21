@@ -151,8 +151,8 @@ test('boss pushes players from either side and stops at stage walls without crus
   }
 });
 
-test('boss boxes activate on exactly frames 13, 12/17 and 11, reaching the short player', () => {
-  for (const [name, active] of [['attack_1', [12]], ['attack_2', [11, 16]], ['attack_3', [10]]]) {
+test('boss boxes activate on exactly frames 13, 12/18 and 11, reaching the short player', () => {
+  for (const [name, active] of [['attack_1', [12]], ['attack_2', [11, 17]], ['attack_3', [10]]]) {
     for (const facing of [-1, 1]) {
       const { player, boss } = setup(facing === -1 ? 600 : 808);
       boss.facing = facing; boss.machine.change(name);
@@ -180,7 +180,7 @@ test('attack 2 can re-hit a stunned player and restart the eight-frame hit anima
   const { player, boss, brain } = setup(); boss.machine.change('attack_2');
   brain.update(11/12); player.update(3/12, 0, [], [boss]);
   assert.equal(player.animator.frame, 3); assert.ok(player.x < 600);
-  brain.update(5/12); assert.equal(player.machine.current, 'hit'); assert.equal(player.animator.frame, 0);
+  brain.update(6/12); assert.equal(player.machine.current, 'hit'); assert.equal(player.animator.frame, 0);
   assert.equal(boss.strikeTargets.size, 2);
 });
 
@@ -207,13 +207,13 @@ test('either guard blocks without damage; attack 2 requires separate guard windo
     assert.equal(parries, 1); assert.equal(player.machine.current, guard); assert.equal(player.x, 600); assert.equal(player.flashRemaining, 0);
     brain.update(1/120, effects); assert.equal(parries, 1);
     player.update(4/16); assert.equal(player.machine.current, 'idle');
-    brain.update(5/12, effects); assert.equal(player.machine.current, 'hit'); assert.equal(parries, 1);
+    brain.update(6/12, effects); assert.equal(player.machine.current, 'hit'); assert.equal(parries, 1);
   }
 });
 
 test('ordinary blocks recoil away on either side less than a hit, without restarting guard', () => {
   for (const guard of ['defend_1', 'defend_2']) for (const facing of [-1, 1]) {
-    for (const [attack, frame] of [['attack_1', 12], ['attack_2', 11], ['attack_2', 16], ['attack_3', 10]]) {
+    for (const [attack, frame] of [['attack_1', 12], ['attack_2', 11], ['attack_2', 17], ['attack_3', 10]]) {
       const { player, boss } = setup(500, 500 - facing * 120);
       boss.facing = facing; boss.machine.change(attack);
       player.machine.change(guard); player.update(1/16);
@@ -256,7 +256,7 @@ test('both strikes can be parried when guard is renewed before the second active
   const { player, boss, brain } = setup(); boss.machine.change('attack_2'); player.machine.change('defend_1');
   let parries = 0; const effects = { parry: () => parries++ };
   brain.update(11/12, effects); player.update(4/16); player.machine.change('defend_2');
-  brain.update(5/12, effects); assert.equal(parries, 2); assert.equal(player.machine.current, 'defend_2');
+  brain.update(6/12, effects); assert.equal(parries, 2); assert.equal(player.machine.current, 'defend_2');
 });
 
 test('far, wrong-facing and preview attacks cannot hit', () => {

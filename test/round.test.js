@@ -81,7 +81,7 @@ test('low-health aggression increases ranged jumps and thrust followups without 
 });
 
 test('each boss move deals its configured damage; the two strikes each deal ten', () => {
-  for (const [name, frame, damage] of [['attack_1', 12, 15], ['attack_2', 11, 10], ['attack_2', 16, 10], ['attack_3', 10, 15], ['jump_attack', 12, 30]]) {
+  for (const [name, frame, damage] of [['attack_1', 12, 15], ['attack_2', 11, 10], ['attack_2', 17, 10], ['attack_3', 10, 15], ['jump_attack', 12, 30]]) {
     const scene = setup(); bossStrike(scene, name, frame);
     assert.equal(scene.player.health, 100 - damage, name);
     assert.equal(scene.duel.damageTaken, damage); assert.equal(scene.duel.noDamage, false);
@@ -89,7 +89,7 @@ test('each boss move deals its configured damage; the two strikes each deal ten'
     assert.equal(scene.player.health, 100 - damage);
   }
   const scene = setup(); bossStrike(scene, 'attack_2', 11);
-  scene.player.x = 260; resolveAttackHits(scene.boss, [scene.player], 16, scene.duel.effects); scene.duel.applyEvents();
+  scene.player.x = 260; resolveAttackHits(scene.boss, [scene.player], 17, scene.duel.effects); scene.duel.applyEvents();
   assert.equal(scene.player.health, 80);
 });
 

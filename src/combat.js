@@ -11,12 +11,12 @@ export const ATTACKBOXES = {
   13: { x: 8, y: -35, width: 44, height: 16 }, // source frame 14: (72,56)..(116,72)
 };
 // The extra lower area catches the shorter player, including at body contact.
-// Frame keys are zero-based: attack 1 => 13, attack 2 => 12/17, attack 3 => 11.
+// Frame keys are zero-based: attack 1 => 13, attack 2 => 12/18, attack 3 => 11.
 export const BOSS_ATTACKBOXES = {
   attack_1: { 12: { x: 8, y: -86, width: 112, height: 80 } },
   attack_2: {
     11: { x: 2, y: -63, width: 100, height: 57 },
-    16: { x: 8, y: -88, width: 112, height: 82 },
+    17: { x: 8, y: -88, width: 112, height: 82 },
   },
   attack_3: { 10: { x: 12, y: -88, width: 112, height: 82 } },
   jump_attack: { 12: { x: 2, y: -75, width: 124, height: 77 } },
