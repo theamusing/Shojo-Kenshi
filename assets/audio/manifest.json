@@ -1,0 +1,84 @@
+[
+  {
+    "file": "swing-2.wav",
+    "duration": 0.2768,
+    "license": "CC0-1.0",
+    "sha256": "b7c86795a4df0bd3c85ae98869ee5b07094574e9451983e31e2907b3dac7d5bd",
+    "processing": "Mono, 44.1kHz, 160Hz high-pass, silence trim, short fades, peak normalization.",
+    "sources": [
+      {
+        "file": "swosh-06.flac",
+        "sha256": "9d21a424c5ff4b8b11974e80f5f051ea3526cc97e41f3dd7494b7037c09ec454"
+      }
+    ]
+  },
+  {
+    "file": "swing-4.wav",
+    "duration": 0.2679,
+    "license": "CC0-1.0",
+    "sha256": "12ce4f20038d5d4bbf5f1cacf984643bd31c632c8f1419c13e71404051501bf4",
+    "processing": "Mono, 44.1kHz, 160Hz high-pass, silence trim, short fades, peak normalization.",
+    "sources": [
+      {
+        "file": "swosh-22.flac",
+        "sha256": "c2d125db98ff2d79f3a89a08a24b6618dc1f0410c2cc717e8cc83ebc6956dcca"
+      }
+    ]
+  },
+  {
+    "file": "hit-1.wav",
+    "duration": 0.6,
+    "license": "CC0-1.0",
+    "sha256": "e75ddc8f435e689d239d371e4dc2f21464e8c60179c67d8713cd6af66bd09ec7",
+    "processing": "CogFireStudios sword impact, mono 44.1kHz, 85Hz high-pass, 3.8kHz low-pass, 180-900Hz body layer at 0.4 gain, gentle tanh saturation, silence trim, 600ms cap, tail decay after 150ms, fades, peak normalization.",
+    "sources": [
+      {
+        "file": "cogfire-547035.mp3",
+        "sha256": "67754d662c5563156a4383eb46299d00dcbaa78ee195c8c6e2f2365e15a97090"
+      }
+    ]
+  },
+  {
+    "file": "hit-2.wav",
+    "duration": 0.6,
+    "license": "CC0-1.0",
+    "sha256": "2330ebba4f103e9d3adc669b5a88e789afd5e13997ee88beacfc12590bb7cf18",
+    "processing": "CogFireStudios sword impact, mono 44.1kHz, 85Hz high-pass, 3.8kHz low-pass, 180-900Hz body layer at 0.4 gain, gentle tanh saturation, silence trim, 600ms cap, tail decay after 150ms, fades, peak normalization.",
+    "sources": [
+      {
+        "file": "cogfire-547036.mp3",
+        "sha256": "5aaee83cc53bb1b185c40993f430b7ece398d1083b4621f2e5dc588a37eada8e"
+      }
+    ]
+  },
+  {
+    "file": "hit-3.wav",
+    "duration": 0.65,
+    "license": "User-provided; source license unspecified (wet layer: CC0-1.0)",
+    "sha256": "f914a970d99e8be478dc0e2496db6444b95412182f0e44f294c8543eb59b77c6",
+    "processing": "User-provided MP3, mono 44.1kHz, 70Hz high-pass, 4.2kHz low-pass; accent at 0.083s; 45ms accent hold, 110ms smooth tail reduction to -14dB then decay; short CC0 wet impact layer at 18% peak, 2.4kHz low-pass, 200ms cap and fast decay; fades, peak normalization. Original MP3 preserved.",
+    "sources": [
+      {
+        "file": "assets\\audio\\hit-3.mp3",
+        "sha256": "f222d8afaab66795a55bb626aeca146a8d8f52a9efecd4ad5a3501cdd34858ba"
+      },
+      {
+        "file": "impsplat/impactsplat07.mp3.flac",
+        "sha256": "adae57b90523d754a7b0221876d1c3e4c7b90d5ded732af4895c5b8d0489b640"
+      }
+    ]
+  },
+  {
+    "file": "parry-1.wav",
+    "duration": 0.6681,
+    "license": "CC0-1.0",
+    "sha256": "03431ed349be7ddcea3234614b4af05a050a1d2d95e8f960b0db441281640404",
+    "processing": "Recorded blade clash, 180Hz high-pass, trim, two quiet early reflections, fades, peak normalization.",
+    "sources": [
+      {
+        "file": "sword_clash.1.ogg",
+        "sha256": "5c5e78e466ba78fe2414f2b7a2a6eb674822ccfc8a8bc9fda32be22f5dde5e69"
+      }
+    ]
+  }
+]
