@@ -3,7 +3,7 @@ const TAU = Math.PI * 2;
 export const SOUND_DURATIONS = {
   taiko: 1.15, rim: .20, pluck: 1.4, flute: 1.4, strings: 1.6, gong: 2.8,
 };
-export const SFX_PITCH_RANGES = { swing: [-2, 2], hit: [-1, .5], parry: [-1.2, 1.2] }; // semitone bounds
+export const SFX_PITCH_RANGES = { swing: [-2, 2], hit: [-2, 1], parry: [-1.2, 1.2] }; // semitone bounds
 export function pitchVariation(kind, random = Math.random) {
   const [min, max] = SFX_PITCH_RANGES[kind];
   return 2 ** ((min + random() * (max - min)) / 12);

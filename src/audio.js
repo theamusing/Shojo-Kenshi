@@ -8,7 +8,7 @@ export const SFX_FILES = Object.fromEntries(Object.entries({
 }).map(([kind, files]) => [kind, files.map(file => new URL(`../assets/audio/${file}`, import.meta.url).href)]));
 const EFFECT_MIX = {
   playerSwing: { pitch: 'swing', rate: 1.25, gain: .28 },
-  bossSwing: { pitch: 'swing', rate: .82, gain: .35 },
+  bossSwing: { pitch: 'swing', rate: .82, gain: .28 },
   hit: { pitch: 'hit', rate: .78, gain: .68 },
   parry: { pitch: 'parry', rate: 1.17, gain: 1.65 },
 };

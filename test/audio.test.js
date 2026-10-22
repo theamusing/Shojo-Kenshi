@@ -194,8 +194,8 @@ test('fixed actor samples, bright loud parry and heavier jump strikes retain the
   const bossSwing = capture(() => sound.swing(boss));
   assert.equal(playerSwing.source.buffer, sound.sampleCache.get(SFX_FILES.playerSwing[0]));
   assert.equal(bossSwing.source.buffer, sound.sampleCache.get(SFX_FILES.bossSwing[0]));
-  assert.ok(playerSwing.gain.gain.value < bossSwing.gain.gain.value);
-  assert.ok(bossSwing.gain.gain.value < .5);
+  assert.equal(playerSwing.gain.gain.value, .28);
+  assert.equal(bossSwing.gain.gain.value, .28);
   assert.ok(playerSwing.source.playbackRate.value > 1);
   assert.ok(playerSwing.source.playbackRate.value > bossSwing.source.playbackRate.value);
   const hit = capture(() => sound.impact(boss, player));
