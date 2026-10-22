@@ -30,7 +30,7 @@
     "duration": 0.6,
     "license": "CC0-1.0",
     "sha256": "bceadb009febc4c9d3e27424823e3119b0c89b1ba01dbe32f083e293b7c86418",
-    "processing": "CogFireStudios sword impact, mono 44.1kHz, 85Hz high-pass, 3.8kHz low-pass, 180-900Hz body layer at 0.4 gain, gentle tanh saturation, silence trim, 600ms cap, tail decay after 150ms, fades, peak normalization. Final 2.6kHz fourth-order low-pass after all mixing/saturation to soften the high end.",
+    "processing": "CogFireStudios sword impact, mono 44.1kHz, 85Hz high-pass, 3.8kHz low-pass, 180-900Hz body layer at 0.4 gain, gentle tanh saturation, silence trim, 600ms cap, tail decay after 150ms, fades, peak normalization. Final 2.6kHz order-4 low-pass after all mixing/saturation to soften the high end.",
     "sources": [
       {
         "file": "cogfire-547035.mp3",
@@ -43,7 +43,7 @@
     "duration": 0.6,
     "license": "CC0-1.0",
     "sha256": "baa8d4ac6cedb094c73fb068b4ebea95bf16b2bf11826c472f7027678eb8bf88",
-    "processing": "CogFireStudios sword impact, mono 44.1kHz, 85Hz high-pass, 3.8kHz low-pass, 180-900Hz body layer at 0.4 gain, gentle tanh saturation, silence trim, 600ms cap, tail decay after 150ms, fades, peak normalization. Final 2.6kHz fourth-order low-pass after all mixing/saturation to soften the high end.",
+    "processing": "CogFireStudios sword impact, mono 44.1kHz, 85Hz high-pass, 3.8kHz low-pass, 180-900Hz body layer at 0.4 gain, gentle tanh saturation, silence trim, 600ms cap, tail decay after 150ms, fades, peak normalization. Final 2.6kHz order-4 low-pass after all mixing/saturation to soften the high end.",
     "sources": [
       {
         "file": "cogfire-547036.mp3",
@@ -55,8 +55,8 @@
     "file": "hit-3.wav",
     "duration": 0.65,
     "license": "User-provided; source license unspecified (wet layer: CC0-1.0)",
-    "sha256": "fe6f1a938c8e71f0a0e41eedc225181115822fa495ba26f1093f5c4c5aab98f6",
-    "processing": "User-provided MP3, mono 44.1kHz, 70Hz high-pass, 4.2kHz low-pass; accent at 0.083s; 45ms accent hold, 110ms smooth tail reduction to -14dB then decay; short CC0 wet impact layer at 18% peak, 2.4kHz low-pass, 200ms cap and fast decay; fades, peak normalization. Original MP3 preserved. Final 2.6kHz fourth-order low-pass after all mixing/saturation to soften the high end.",
+    "sha256": "deb97795dc9f7faa602765a218af2aa838d97a8aef04e08902c5a2b96ceb91cc",
+    "processing": "User-provided MP3, mono 44.1kHz, 70Hz high-pass, 4.2kHz low-pass; accent at 0.083s; 45ms accent hold, 110ms smooth tail reduction to -14dB then decay; short CC0 wet impact layer at 18% peak, 2.4kHz low-pass, 200ms cap and fast decay; fades, peak normalization. Original MP3 preserved. Final 4.8kHz order-2 low-pass after all mixing/saturation to soften the high end.",
     "sources": [
       {
         "file": "assets\\audio\\hit-3.mp3",

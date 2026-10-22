@@ -43,8 +43,10 @@ def mix(*layers):
 def write(name, samples, sources, processing, license='CC0-1.0'):
     if name.startswith('hit-'):
         # Filter after saturation and wet layering, including any new harmonics.
-        samples = sosfilt(butter(4, 2600, 'lowpass', fs=RATE, output='sos'), samples)
-        processing += ' Final 2.6kHz fourth-order low-pass after all mixing/saturation to soften the high end.'
+        # Hit 3 needs more upper-mid detail at its slowed in-game playback rate.
+        cutoff, order = (4800, 2) if name == 'hit-3.wav' else (2600, 4)
+        samples = sosfilt(butter(order, cutoff, 'lowpass', fs=RATE, output='sos'), samples)
+        processing += f' Final {cutoff / 1000:g}kHz order-{order} low-pass after all mixing/saturation to soften the high end.'
     fade_in = min(int(.001 * RATE), len(samples))
     fade_out = min(int(.018 * RATE), len(samples))
     samples[:fade_in] *= np.linspace(0, 1, fade_in)
