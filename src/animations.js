@@ -27,7 +27,9 @@ export const ANIMATIONS = {
     hit: clip('boss_hit', 13),
     down: clip('boss_down', 10, { anchorY: 106 }),
     up: clip('boss_up', 11, { groundY: [106, 106, 106, 106, 107, 107, 107, 107, 107, 107, 107] }),
-    defeated: clip('boss_defeated', 15, { groundY: [107, 108, 107, 107, 107, 107, 107, 107, 107, 111, 112, 112, 112, 112, 112] }),
+    // Hands and blade extend below the body plane in the prone frames.
+    // Keep the body grounded instead of lifting it to the lowest opaque pixel.
+    defeated: clip('boss_defeated', 15, { groundY: [107, 108, 107, 107, 107, 107, 107, 107, 107, 107, 107, 107, 107, 107, 107] }),
   },
 };
 export const LABELS = { idle: '待机', run: '跑动', attack: '攻击', defend_1: '防御一', defend_2: '防御二', defend_3: '防御三', hit: '受击', attack_1: '攻击一', attack_2: '攻击二', attack_3: '攻击三', jump_attack: '跳跃攻击', defend: '防御', down: '跪倒', up: '起身', defeated: '倒下' };
