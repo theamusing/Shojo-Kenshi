@@ -3,9 +3,10 @@ const TAU = Math.PI * 2;
 export const SOUND_DURATIONS = {
   taiko: 1.15, rim: .20, pluck: 1.4, flute: 1.4, strings: 1.6, gong: 2.8,
 };
-export const SFX_PITCH_RANGES = { swing: 2, hit: .5, parry: 1.2 }; // semitones either side
+export const SFX_PITCH_RANGES = { swing: [-2, 2], hit: [-1, .5], parry: [-1.2, 1.2] }; // semitone bounds
 export function pitchVariation(kind, random = Math.random) {
-  return 2 ** (((random() * 2 - 1) * SFX_PITCH_RANGES[kind]) / 12);
+  const [min, max] = SFX_PITCH_RANGES[kind];
+  return 2 ** ((min + random() * (max - min)) / 12);
 }
 function seededNoise(seed) {
   let state = seed >>> 0 || 1;

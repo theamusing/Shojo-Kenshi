@@ -76,10 +76,10 @@ test('all synthesized sounds are finite, non-silent and bounded at browser sampl
 });
 
 test('random pitch stays in each sound range and musical voices keep their written pitches', () => {
-  for (const [kind, semitones] of Object.entries(SFX_PITCH_RANGES)) {
-    assert.equal(pitchVariation(kind, () => .5), 1);
-    assert.ok(pitchVariation(kind, () => 0) < 1);
-    assert.equal(pitchVariation(kind, () => 1), 2 ** (semitones / 12));
+  for (const [kind, [min, max]] of Object.entries(SFX_PITCH_RANGES)) {
+    assert.equal(pitchVariation(kind, () => .5), 2 ** ((min + max) / 24));
+    assert.equal(pitchVariation(kind, () => 0), 2 ** (min / 12));
+    assert.equal(pitchVariation(kind, () => 1), 2 ** (max / 12));
   }
   const score = createScore(); assert.ok(score.length > 400);
   assert.equal(new Set(score.map(event => Math.floor(event.beat / 4))).size, 32);
