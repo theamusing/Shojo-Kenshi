@@ -30,7 +30,6 @@ test('real hits create a single burst at the victim center, including both combo
     player.startAttackSegment(2); resolveAttackHits(player, [boss], 13, effects);
     assert.equal(effects.hits.length, 2);
     assert.ok(effects.hits[1].particles.length > hit.particles.length);
-    assert.ok(effects.hits[1].reach > hit.reach);
   }
 });
 
@@ -39,22 +38,18 @@ test('boss bursts are larger, predominantly exit away from the attacker, and dis
     const { player, boss, effects } = setup(facing);
     effects.impact(player, boss); effects.impact(boss, player);
     const [large, small] = effects.hits;
-    assert.ok(large.reach > small.reach); assert.ok(large.particles.length > small.particles.length);
-    const outgoing = large.rays.filter(ray => ray.dx * facing > 0);
-    const returning = large.rays.filter(ray => ray.dx * facing < 0);
-    assert.ok(large.rays.length >= 2 && large.rays.length <= 3);
-    assert.ok(outgoing.length >= returning.length);
-    assert.ok(Math.min(...outgoing.map(ray => Math.abs(ray.dx))) > Math.max(...returning.map(ray => Math.abs(ray.dx))) * 2);
+    assert.ok(large.particles.length > small.particles.length);
+    assert.ok(Math.max(...large.particles.map(p => Math.abs(p.vx))) > Math.max(...small.particles.map(p => Math.abs(p.vx))));
     const forward = large.particles.filter(p => p.vx * facing > 0);
     const backward = large.particles.filter(p => p.vx * facing < 0);
-    assert.ok(forward.length >= backward.length * 4);
+    assert.ok(backward.length > 0 && forward.length >= backward.length * 2);
     assert.ok(Math.min(...forward.map(p => Math.abs(p.vx))) > Math.max(...backward.map(p => Math.abs(p.vx))) * 2);
     effects.update(.5); assert.equal(effects.hits.length, 0);
   }
 });
 
 test('particles with horizontal velocity never drop under gravity', () => {
-  const hit = { x: 200, y: 100, rays: [], particles: [
+  const hit = { x: 200, y: 100, particles: [
     { vx: 800, vy: 0, drag: 2, life: .3, size: 2, trail: .02 },
   ] };
   const ctx = { save() {}, restore() {}, fillRect(x, y) { assert.equal(y, 100); } };
@@ -98,15 +93,13 @@ test('pause freezes hit particles, reset clears them, and victory uses its slow-
   duel.reset(); assert.equal(duel.effects.hits.length, 0);
 });
 
-test('horizontal cones and random-sized particles use only white or solid execution gray', () => {
+test('random-sized particles use only white or solid execution gray', () => {
   const { player, boss } = setup();
   let seed = 31;
   const effects = new CombatEffects(() => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 2 ** 32; });
   player.machine.change('attack'); resolveAttackHits(player, [boss], 5, effects);
   const hit = effects.hits[0];
   assert.ok(new Set(hit.particles.map(p => p.size)).size > 2);
-  assert.ok(hit.rays.every(ray => Math.abs(ray.dx) > Math.abs(ray.dy) * 2));
-  assert.ok(hit.rays.some(ray => ray.dx < 0) && hit.rays.some(ray => ray.dx > 0));
   for (const color of ['#fff', '#999999']) {
     let marks = 0;
     const ctx = { save() {}, restore() {}, fillRect() {

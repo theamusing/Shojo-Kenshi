@@ -10,10 +10,6 @@ export function createHitBurst(attacker, target, random) {
   const second = attacker.kind === 'player' && attacker.attackStage === 2;
   const bossTarget = target.kind === 'boss', scale = bossTarget ? 1.5 : 1;
   const duration = heavy ? .40 : .36;
-  const reach = (heavy ? 128 : second ? 124 : 110) * scale;
-  // Always one broad main spear and a short return; sometimes one fine accent.
-  const rayProfiles = [[1, -.04, 1, 11], [-1, -.08, .22, 2.5]];
-  if (random() < .5) rayProfiles.push([1, .20, .78, 2.5]);
   const body = getHurtbox(target);
   let y = body.y + body.height / 2;
   // Follow the lowered torso through kneeling/rising rather than its standing box.
@@ -23,22 +19,16 @@ export function createHitBurst(attacker, target, random) {
     y += Math.max(0, 1 - target.animator.frame / 8) * 18 * target.scale;
   }
   return { x: snap(target.x), y: snap(y),
-    direction, age: 0, duration, heavy, reach,
-    rays: rayProfiles.map(([side, baseAngle, lengthScale, width]) => {
-      const angle = baseAngle + (random() - .5) * .035;
-      const length = reach * lengthScale * (.95 + random() * .05);
-      return { dx: direction * side * length,
-        dy: Math.tan(angle) * length, width: width * scale };
-    }),
+    direction, age: 0, duration, heavy,
     particles: Array.from({ length: bossTarget ? (second ? 22 : 18) : (heavy ? 16 : 12) }, (_, i) => {
-      // About 85% exit behind the victim; the few returning flecks are short.
-      const forward = i % 7 !== 0;
+      // Most exit behind the victim; a smaller, slower spray returns toward the attacker.
+      const forward = i % 4 !== 0;
       const angle = (random() - .5) * .9 + (forward ? 0 : Math.PI);
-      const speed = (forward ? 220 + random() * 680 : 60 + random() * 80) * scale;
+      const speed = (forward ? 220 + random() * 680 : 120 + random() * 100) * scale;
       const chunky = i % 3 === 0 || random() < .2;
       return { vx: Math.cos(angle) * speed * direction, vy: Math.sin(angle) * speed,
         size: chunky ? (bossTarget ? 4 : 3) + Math.floor(random() * 3) : 1 + Math.floor(random() * 2),
-        life: duration * (.55 + random() * .45) * (forward ? 1 : .7), drag: 1.4 + random() * 1.2,
+        life: duration * (.55 + random() * .45) * (forward ? 1 : .9), drag: 1.4 + random() * 1.2,
         trail: i % 3 === 0 ? 0 : .006 + random() * .01 };
     }),
   };
@@ -60,28 +50,12 @@ function streak(ctx, x0, y0, x1, y1, size = 1) {
   }
 }
 
-// Filled, tapering cones, rasterized in columns of source-sized pixels.
-function cone(ctx, x, y, dx, dy, width) {
-  const steps = Math.max(1, Math.round(Math.abs(dx) / HIT_PIXEL));
-  const direction = Math.sign(dx);
-  for (let column = 0; column <= steps; column++) {
-    const t = column / steps;
-    const half = Math.max(0, Math.round(width * (1 - t) ** 1.4 / HIT_PIXEL));
-    ctx.fillRect(x + direction * column * HIT_PIXEL, snap(y + dy * t) - half * HIT_PIXEL,
-      HIT_PIXEL, (half * 2 + 1) * HIT_PIXEL);
-  }
-}
-
 export function drawHitBursts(ctx, hits, color = '#fff') {
   if (!hits.length) return;
   ctx.save(); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
   ctx.fillStyle = color;
   for (const hit of hits) {
     const { x, y, age } = hit;
-    if (age < .17) {
-      const strength = 1 - age / .17, extension = .85 + .15 * strength;
-      for (const ray of hit.rays) cone(ctx, x, y, ray.dx * extension, ray.dy * extension, ray.width * Math.sqrt(strength));
-    }
     for (const p of hit.particles) {
       if (age >= p.life) continue;
       const t = age + .012, previous = Math.max(0, t - p.trail);
