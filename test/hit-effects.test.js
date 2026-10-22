@@ -48,7 +48,7 @@ test('boss bursts are larger, predominantly exit away from the attacker, and dis
     const backward = large.particles.filter(p => p.vx * facing < 0);
     assert.ok(forward.length >= backward.length * 4);
     assert.ok(Math.min(...forward.map(p => Math.abs(p.vx))) > Math.max(...backward.map(p => Math.abs(p.vx))) * 2);
-    effects.update(.3); assert.equal(effects.hits.length, 0);
+    effects.update(.5); assert.equal(effects.hits.length, 0);
   }
 });
 

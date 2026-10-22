@@ -9,7 +9,7 @@ export function createHitBurst(attacker, target, random) {
   const heavy = attacker.machine.current === 'jump_attack';
   const second = attacker.kind === 'player' && attacker.attackStage === 2;
   const bossTarget = target.kind === 'boss', scale = bossTarget ? 1.5 : 1;
-  const duration = heavy ? .28 : .24;
+  const duration = heavy ? .40 : .36;
   const reach = (heavy ? 128 : second ? 124 : 110) * scale;
   const body = getHurtbox(target);
   let y = body.y + body.height / 2;
@@ -21,23 +21,24 @@ export function createHitBurst(attacker, target, random) {
   }
   return { x: snap(target.x), y: snap(y),
     direction, age: 0, duration, heavy, reach,
-    rays: Array.from({ length: 10 }, (_, i) => {
-      const forward = i < 8, index = forward ? i : i - 8;
-      const angle = (index - (forward ? 3.5 : .5)) * .085 + (random() - .5) * .05;
-      const central = forward && (index === 3 || index === 4);
-      const length = reach * (central ? 1 : .65 + random() * .35) * (forward ? 1 : .24);
+    rays: Array.from({ length: 5 }, (_, i) => {
+      const forward = i < 4;
+      // One broad spear, one medium wedge, two fine accents, one short back-spray.
+      const angle = [-.23, -.04, .14, .28, -.08][i] + (random() - .5) * .035;
+      const length = reach * [.82, 1, .72, .90, .22][i] * (.95 + random() * .05);
       return { dx: direction * (forward ? 1 : -1) * length,
-        dy: Math.tan(angle) * length, width: (central ? 7 : 2 + random() * 3) * scale * (forward ? 1 : .45) };
+        dy: Math.tan(angle) * length, width: [2, 11, 5.5, 1.5, 2.5][i] * scale };
     }),
-    particles: Array.from({ length: bossTarget ? (second ? 46 : 40) : (heavy ? 34 : 28) }, (_, i) => {
+    particles: Array.from({ length: bossTarget ? (second ? 22 : 18) : (heavy ? 16 : 12) }, (_, i) => {
       // About 85% exit behind the victim; the few returning flecks are short.
       const forward = i % 7 !== 0;
       const angle = (random() - .5) * .9 + (forward ? 0 : Math.PI);
-      const speed = (600 + random() * 480) * scale * (forward ? 1 : .27);
+      const speed = (420 + random() * 320) * scale * (forward ? 1 : .27);
+      const chunky = i % 3 === 0 || random() < .2;
       return { vx: Math.cos(angle) * speed * direction, vy: Math.sin(angle) * speed,
-        size: 1 + Math.floor(random() ** 2 * (bossTarget ? 5 : 4)),
+        size: chunky ? (bossTarget ? 4 : 3) + Math.floor(random() * 3) : 1 + Math.floor(random() * 2),
         life: duration * (.55 + random() * .45) * (forward ? 1 : .7), drag: 1.4 + random() * 1.2,
-        trail: .01 + random() * .015 };
+        trail: i % 3 === 0 ? 0 : .006 + random() * .01 };
     }),
   };
 }
@@ -76,9 +77,9 @@ export function drawHitBursts(ctx, hits, color = '#fff') {
   ctx.fillStyle = color;
   for (const hit of hits) {
     const { x, y, age } = hit;
-    if (age < .11) {
-      const strength = 1 - age / .11, extension = .85 + .15 * strength;
-      for (const ray of hit.rays) cone(ctx, x, y, ray.dx * extension, ray.dy * extension, ray.width * strength);
+    if (age < .17) {
+      const strength = 1 - age / .17, extension = .85 + .15 * strength;
+      for (const ray of hit.rays) cone(ctx, x, y, ray.dx * extension, ray.dy * extension, ray.width * Math.sqrt(strength));
     }
     for (const p of hit.particles) {
       if (age >= p.life) continue;
@@ -89,8 +90,8 @@ export function drawHitBursts(ctx, hits, color = '#fff') {
       const tx = snap(x + p.vx * oldTravel), ty = snap(y + p.vy * oldTravel);
       const progress = age / p.life;
       // Keep a solid white (or execution-gray) color; shrink instead of fading.
-      streak(ctx, tx, ty, px, py);
-      const size = Math.max(1, p.size - Math.floor(progress * 2));
+      const size = Math.max(1, p.size - Math.floor(Math.max(0, progress - .6) / .4 * (p.size - 1)));
+      if (p.trail > 0) streak(ctx, tx, ty, px, py, Math.max(1, Math.floor(size * .6)));
       ctx.fillRect(px, py, size * HIT_PIXEL, size * HIT_PIXEL);
     }
   }
