@@ -22,6 +22,7 @@ test('real hits create a single burst at the victim center, including both combo
     assert.equal(effects.hits.length, 1);
     const hit = effects.hits[0], hurt = getHurtbox(boss);
     assert.equal(hit.direction, facing);
+    assert.ok(hit.rays.every(r => Math.sign(r.dx) === facing));
     assert.equal(hit.x, boss.x);
     assert.ok(Math.abs(hit.y - (hurt.y + hurt.height / 2)) <= HIT_PIXEL / 2);
     assert.ok(hit.x >= hurt.x && hit.x <= hurt.x + hurt.width);
@@ -31,6 +32,37 @@ test('real hits create a single burst at the victim center, including both combo
     assert.equal(effects.hits.length, 2);
     assert.ok(effects.hits[1].particles.length > hit.particles.length);
   }
+});
+
+test('successive hits overlap without restarting, moving or removing the earlier burst', () => {
+  const { player, boss, effects } = setup();
+  player.machine.change('attack');
+  resolveAttackHits(player, [boss], 5, effects);
+  effects.update(.08);
+  const first = effects.hits[0], snapshot = structuredClone(first);
+  boss.x += 12;
+  player.startAttackSegment(2);
+  resolveAttackHits(player, [boss], 13, effects);
+  const second = effects.hits[1];
+  assert.equal(effects.hits.length, 2);
+  assert.deepEqual(first, snapshot);
+  assert.equal(second.age, 0);
+  assert.notEqual(first.x, second.x);
+  assert.notEqual(first.particles, second.particles);
+  assert.notEqual(first.rays, second.rays);
+  const capture = hits => {
+    const marks = [];
+    drawHitBursts({ save() {}, restore() {}, fillRect(...rect) { marks.push(rect); } }, hits);
+    return marks;
+  };
+  const firstMarks = capture([first]), secondMarks = capture([second]);
+  assert.ok(firstMarks.length && secondMarks.length);
+  assert.deepEqual(capture(effects.hits), [...firstMarks, ...secondMarks]);
+  effects.update(.19);
+  assert.deepEqual(effects.hits, [second]);
+  assert.equal(second.age, .19);
+  effects.update(.08);
+  assert.equal(effects.hits.length, 0);
 });
 
 test('boss bursts are larger, predominantly exit away from the attacker, and dissipate quickly', () => {
@@ -54,6 +86,26 @@ test('particles with horizontal velocity never drop under gravity', () => {
   ] };
   const ctx = { save() {}, restore() {}, fillRect(x, y) { assert.equal(y, 100); } };
   for (const age of [.05, .1, .2]) { hit.age = age; drawHitBursts(ctx, [hit]); }
+});
+
+test('blade flash tapers at both tips, stretches thinner, then splits and travels outward', () => {
+  const hit = { x: 100, y: 100, particles: [], rays: [{ dx: 120, dy: 0, width: 10, offsetY: 0 }] };
+  const capture = age => {
+    const marks = []; hit.age = age;
+    drawHitBursts({ save() {}, restore() {}, fillRect(x, y, w, h) { marks.push({ x, h }); } }, [hit]);
+    return marks;
+  };
+  const early = capture(0), stretching = capture(.05), split = capture(.13);
+  const height = marks => Math.max(...marks.map(m => m.h));
+  const span = marks => Math.max(...marks.map(m => m.x)) - Math.min(...marks.map(m => m.x));
+  assert.ok(early.find(m => m.x === 100).h > early[0].h);
+  assert.ok(early.find(m => m.x === 100).h > early.at(-1).h);
+  assert.ok(Math.max(...early.map(m => m.x)) - 100 > (100 - Math.min(...early.map(m => m.x))) * 2);
+  assert.ok(span(stretching) > span(early)); assert.ok(height(stretching) < height(early));
+  assert.ok(split.some(m => m.x < 90) && split.some(m => m.x > 110));
+  assert.ok(split.every(m => Math.abs(m.x - 100) >= 10));
+  assert.ok(span(split) > span(stretching)); assert.ok(height(split) < height(stretching));
+  assert.equal(capture(.20).length, 0);
 });
 
 test('misses and blocked hits do not create damage particles; unguarded player receives them', () => {
@@ -99,6 +151,17 @@ test('random-sized particles use only white or solid execution gray', () => {
   const effects = new CombatEffects(() => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 2 ** 32; });
   player.machine.change('attack'); resolveAttackHits(player, [boss], 5, effects);
   const hit = effects.hits[0];
+  assert.ok(hit.rays.length === 2 || hit.rays.length === 3);
+  assert.ok(Math.abs(hit.mainAngle) <= Math.PI / 6);
+  assert.ok(hit.rays.every(r => Math.abs(Math.atan2(r.dy, r.dx * hit.direction) - hit.mainAngle) <= Math.PI / 18 + 1e-10));
+  assert.equal(hit.radius, getHurtbox(boss).width / 2);
+  for (const p of hit.particles) {
+    assert.ok(Math.abs(p.vy) <= Math.abs(p.vx) * Math.tan(Math.PI / 3) + 1e-8);
+    assert.ok(p.aspect >= 1.8);
+    assert.ok(Math.abs(Math.hypot(p.offsetX, p.offsetY) - hit.radius) < 1e-8);
+    assert.ok(p.offsetX * p.vx + p.offsetY * p.vy > 0);
+    assert.ok(Math.abs(p.offsetX * p.vy - p.offsetY * p.vx) < 1e-8);
+  }
   assert.ok(new Set(hit.particles.map(p => p.size)).size > 2);
   for (const color of ['#fff', '#999999']) {
     let marks = 0;

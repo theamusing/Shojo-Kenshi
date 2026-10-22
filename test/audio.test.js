@@ -169,7 +169,7 @@ test('recordings load once, a failed sample retries, and BGM runs without synthe
   let fail = true;
   const sound = new GameAudio({ contextFactory: () => ctx, fetcher: async url => {
     calls.push(url);
-    if (url.endsWith('hit-3.wav') && fail) return { ok: false, status: 404 };
+    if (url.endsWith('hit.wav') && fail) return { ok: false, status: 404 };
     return sampleResponse();
   } });
   t.after(() => sound.dispose());
@@ -195,12 +195,12 @@ test('fixed actor samples, bright loud parry and heavier jump strikes retain the
   assert.equal(playerSwing.source.buffer, sound.sampleCache.get(SFX_FILES.playerSwing[0]));
   assert.equal(bossSwing.source.buffer, sound.sampleCache.get(SFX_FILES.bossSwing[0]));
   assert.equal(playerSwing.gain.gain.value, .28);
-  assert.equal(bossSwing.gain.gain.value, .28);
+  assert.equal(bossSwing.gain.gain.value, .22);
   assert.ok(playerSwing.source.playbackRate.value > 1);
   assert.ok(playerSwing.source.playbackRate.value > bossSwing.source.playbackRate.value);
   const hit = capture(() => sound.impact(boss, player));
   assert.equal(hit.source.buffer, sound.sampleCache.get(SFX_FILES.hit[0]));
-  assert.equal(hit.gain.gain.value, .68);
+  assert.equal(hit.gain.gain.value, .50);
   const parry = capture(() => sound.parry(player));
   assert.equal(parry.source.buffer, sound.sampleCache.get(SFX_FILES.parry[0]));
   assert.ok(parry.source.playbackRate.value < 1.3);
@@ -266,7 +266,7 @@ test('boss block uses both parry layers at a lower pitch and gain without duckin
 
 test('a missing player swing cannot substitute the boss recording', async t => {
   const sound = new GameAudio({ contextFactory: fakeContext, fetcher: async url =>
-    url.endsWith('swing-4.wav') ? { ok: false, status: 404 } : sampleResponse() });
+    url.endsWith('player-swing.wav') ? { ok: false, status: 404 } : sampleResponse() });
   t.after(() => sound.dispose());
   await sound.start();
   sound.swing({ kind: 'player', x: 260 });
@@ -278,12 +278,12 @@ test('a missing player swing cannot substitute the boss recording', async t => {
 test('all shipped recordings are short, valid PCM WAV with provenance and no clipping', async () => {
   const manifest = JSON.parse(await readFile(new URL('../assets/audio/manifest.json', import.meta.url), 'utf8'));
   const urls = Object.values(SFX_FILES).flat(); assert.equal(urls.length, 4);
-  assert.deepEqual(urls.map(url => url.split('/').at(-1)).sort(), ['hit-3.wav', 'parry-1.wav', 'swing-2.wav', 'swing-4.wav']);
-  assert.ok(manifest.length >= urls.length);
+  assert.deepEqual(urls.map(url => url.split('/').at(-1)).sort(), ['boss-swing.wav', 'hit.wav', 'parry.wav', 'player-swing.wav']);
+  assert.equal(manifest.length, urls.length);
   for (const url of urls) {
     const bytes = await readFile(new URL(url));
     const row = manifest.find(item => url.endsWith(item.file));
-    assert.ok(row); assert.equal(row.license, row.file === 'hit-3.wav' ? 'User-provided; source license unspecified (wet layer: CC0-1.0)' : 'CC0-1.0'); assert.ok(row.sources.length);
+    assert.ok(row); assert.equal(row.license, row.file === 'hit.wav' ? 'User-provided; source license unspecified (wet layer: CC0-1.0)' : 'CC0-1.0'); assert.ok(row.sources.length);
     assert.equal(createHash('sha256').update(bytes).digest('hex'), row.sha256);
     assert.equal(bytes.toString('ascii', 0, 4), 'RIFF'); assert.equal(bytes.toString('ascii', 8, 12), 'WAVE');
     assert.equal(bytes.readUInt16LE(20), 1); assert.equal(bytes.readUInt16LE(22), 1);

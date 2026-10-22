@@ -2,7 +2,7 @@
 import { Actor } from './actor.js';
 import { GAME_KEYS, KeyboardInput } from './input.js';
 import { drawHitboxes } from './combat.js';
-import { drawHitBursts } from './hit-effects.js';
+import { drawHitBursts, drawHitEmissionRings } from './hit-effects.js';
 import { Duel, FINISHER } from './duel.js';
 import { loadProgress, saveProgress } from './progress.js';
 import { GameAudio } from './audio.js';
@@ -169,7 +169,10 @@ try {
     drawStage(sceneContext, background, worldTime, Object.values(actors), false);
     for (const actor of drawOrder) actor.draw(sceneContext, images);
     duel.effects.draw(sceneContext, { showHits: !duel.finisherActive });
-    if (showHitboxes) drawHitboxes(sceneContext, drawOrder);
+    if (showHitboxes) {
+      drawHitboxes(sceneContext, drawOrder);
+      drawHitEmissionRings(sceneContext, drawOrder);
+    }
     const shake = reducedMotion.matches ? { x: 0, y: 0 } : duel.effects.cameraOffset;
     ctx.fillStyle = '#172a30'; ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.save(); ctx.translate(shake.x, shake.y); ctx.imageSmoothingEnabled = false;

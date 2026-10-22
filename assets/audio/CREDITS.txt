@@ -2,52 +2,44 @@ Shojo Kenshi - recorded combat sound effects
 Sources verified and downloaded: 2026-10-21
 
 The downloaded source packs below are published under CC0 1.0 Universal.
-The user-provided hit-3.mp3 has no license metadata supplied here.
+The user-provided source-assets/audio/hit-original.mp3 has no license metadata supplied here.
 License: https://creativecommons.org/publicdomain/zero/1.0/
 These recordings may be used, modified and redistributed, including in commercial games.
 Attribution is provided here in appreciation of the authors.
 
-SWING (swing-2.wav: boss; swing-4.wav: player)
+SWING (boss-swing.wav; player-swing.wav)
 Swish - bamboo stick weapon swhoshes
 Author: Iwan "qubodup" Gabovitch
 Source: https://opengameart.org/content/swish-bamboo-stick-weapon-swhoshes
 Download: https://opengameart.org/sites/default/files/swoshes.7z
 Files: swosh-06.flac, swosh-22.flac
+Preserved as: source-assets/audio/boss-swing.flac, source-assets/audio/player-swing.flac
 
-HIT (hit-1.wav, hit-2.wav)
-Hit Impact Sword / Hit Impact Sword 2
-Author: CogFireStudios
-Source: https://freesound.org/people/CogFireStudios/sounds/547035/
-Source: https://freesound.org/people/CogFireStudios/sounds/547036/
-Public HQ previews (CC0):
-https://cdn.freesound.org/previews/547/547035_7614679-hq.mp3
-https://cdn.freesound.org/previews/547/547036_7614679-hq.mp3
-Cached as: cogfire-547035.mp3, cogfire-547036.mp3
-
-HIT 3 (hit-3.wav)
-Main recording: user-provided assets/audio/hit-3.mp3, preserved unchanged.
+HIT (hit.wav)
+Main recording: user-provided source-assets/audio/hit-original.mp3, preserved unchanged.
 Original author/license: unspecified by the user.
 Wet texture: 8 wet squish, slurp impacts (CC0)
 Author: Independent.nu (submitted by qubodup)
 Source: https://opengameart.org/content/8-wet-squish-slurp-impacts
 Download: https://opengameart.org/sites/default/files/independent_nu_ljudbank-wet_squish_slurp_impacts.7z
 File: impsplat/impactsplat07.mp3.flac
+Preserved as: source-assets/audio/hit-wet.flac
 Processing: preserve main accent, attenuate tail, add a short quiet filtered wet layer.
 
-PARRY (parry-1.wav only)
+PARRY (parry.wav)
 20 Sword Sound Effects (Attacks and Clashes)
 Author: StarNinjas
 Source: https://opengameart.org/content/20-sword-sound-effects-attacks-and-clashes
 Download: https://opengameart.org/sites/default/files/sword_clash_-_starninjas_0.zip
 File: sword_clash.1.ogg
+Preserved as: source-assets/audio/parry.ogg
 
 Game edits: mono conversion, resampling, leading silence removal, filtering,
-short fades, level normalization; hit low-pass filtering, low-mid body enhancement,
-gentle saturation, shortened hit tails and quiet parry early reflections.
-Hit 1/2 receive a final 2.6kHz fourth-order low-pass after mixing and saturation.
-Hit 3 uses a gentler final 4.8kHz second-order low-pass to retain cutting detail
+short fades, level normalization, shortened hit tails and quiet parry early reflections.
+Hit uses a final 4.8kHz second-order low-pass to retain cutting detail
 at the game's slowed playback rate, while keeping the wet layer and subdued tail.
 See manifest.json for per-file provenance, hashes and processing notes.
-Rebuild with scripts/prepare-sfx.py after extracting source archives to .cache/audio-sources/raw.
+Rebuild with scripts/prepare-sfx.py using the five preserved inputs in source-assets/audio.
+The source-assets directory is for offline editing and is not published to GitHub Pages.
 
 The game's existing original synthesized BGM is separate from these recordings.

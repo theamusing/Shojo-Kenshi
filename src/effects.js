@@ -7,9 +7,9 @@ const GUARD_POINTS = {
   defend_3: [[8, -42]],
 };
 const CLASH_STYLES = {
-  parry: { count: 48, duration: .52, flash: .16, radius: 84, reach: 88, core: 12, speed: 1, brightness: 1 },
-  heavy: { count: 64, duration: .6, flash: .19, radius: 108, reach: 110, core: 15, speed: 1.2, brightness: 1 },
-  break: { count: 88, duration: .7, flash: .23, radius: 138, reach: 132, core: 19, speed: 1.4, brightness: 1 },
+  parry: { count: 48, duration: .52, flash: .16, radius: 105, reach: 88, core: 16, speed: 1, brightness: 1 },
+  heavy: { count: 64, duration: .6, flash: .19, radius: 135, reach: 110, core: 20, speed: 1.2, brightness: 1 },
+  break: { count: 88, duration: .7, flash: .23, radius: 172, reach: 132, core: 25, speed: 1.4, brightness: 1 },
   block: { count: 20, duration: .34, flash: .12, radius: 42, reach: 39, core: 6, speed: .58, brightness: .72 },
 };
 export function guardPoint(actor) {
@@ -107,14 +107,15 @@ export class CombatEffects {
         glow.addColorStop(1, 'rgba(255,85,10,0)');
         ctx.fillStyle = glow; ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
         const reach = burst.reach * strength + 4, core = burst.core * strength;
+        const horizontalReach = reach * (burst.style === 'block' ? 1 : 1.18);
         ctx.globalAlpha = brightness * strength;
         ctx.fillStyle = '#ffd17c';
         ctx.beginPath();
-        ctx.moveTo(x - reach, y); ctx.lineTo(x - core, y - core * .4);
+        ctx.moveTo(x - horizontalReach, y); ctx.lineTo(x - core, y - core * .4);
         ctx.lineTo(x - reach * .45, y - reach * .4); ctx.lineTo(x - core * .4, y - core);
         ctx.lineTo(x, y - reach * .65); ctx.lineTo(x + core * .4, y - core);
         ctx.lineTo(x + reach * .45, y - reach * .4); ctx.lineTo(x + core, y - core * .4);
-        ctx.lineTo(x + reach, y); ctx.lineTo(x + core, y + core * .4);
+        ctx.lineTo(x + horizontalReach, y); ctx.lineTo(x + core, y + core * .4);
         ctx.lineTo(x + reach * .45, y + reach * .4); ctx.lineTo(x + core * .4, y + core);
         ctx.lineTo(x, y + reach * .65); ctx.lineTo(x - core * .4, y + core);
         ctx.lineTo(x - reach * .45, y + reach * .4); ctx.lineTo(x - core, y + core * .4);

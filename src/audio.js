@@ -3,13 +3,13 @@ import { SOUND_DURATIONS, synthesize, pitchVariation, createScore, MUSIC_BPM, MU
 const clamp = value => Math.max(0, Math.min(1, Number(value) || 0));
 const BASE_NOTES = { pluck: 57, flute: 69, strings: 45 };
 export const SFX_FILES = Object.fromEntries(Object.entries({
-  playerSwing: ['swing-4.wav'], bossSwing: ['swing-2.wav'],
-  hit: ['hit-3.wav'], parry: ['parry-1.wav'],
+  playerSwing: ['player-swing.wav'], bossSwing: ['boss-swing.wav'],
+  hit: ['hit.wav'], parry: ['parry.wav'],
 }).map(([kind, files]) => [kind, files.map(file => new URL(`../assets/audio/${file}`, import.meta.url).href)]));
 const EFFECT_MIX = {
   playerSwing: { pitch: 'swing', rate: 1.25, gain: .28 },
-  bossSwing: { pitch: 'swing', rate: .82, gain: .28 },
-  hit: { pitch: 'hit', rate: .78, gain: .68 },
+  bossSwing: { pitch: 'swing', rate: .82, gain: .22 },
+  hit: { pitch: 'hit', rate: .78, gain: .50 },
   parry: { pitch: 'parry', rate: 1.17, gain: 1.65 },
 };
 
