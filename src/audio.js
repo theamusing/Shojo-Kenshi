@@ -9,7 +9,7 @@ export const SFX_FILES = Object.fromEntries(Object.entries({
 const EFFECT_MIX = {
   playerSwing: { pitch: 'swing', rate: 1.25, gain: .28 },
   bossSwing: { pitch: 'swing', rate: .82, gain: .35 },
-  hit: { pitch: 'hit', rate: .78, gain: .68 },
+  hit: { pitch: 'hit', rate: .78, gain: .50 },
   parry: { pitch: 'parry', rate: 1.17, gain: 1.65 },
 };
 

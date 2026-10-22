@@ -44,6 +44,8 @@ File: sword_clash.1.ogg
 Game edits: mono conversion, resampling, leading silence removal, filtering,
 short fades, level normalization; hit low-pass filtering, low-mid body enhancement,
 gentle saturation, shortened hit tails and quiet parry early reflections.
+All three hit samples receive a final 2.6kHz fourth-order low-pass after mixing
+and saturation to reduce harsh high frequencies while keeping the impact body.
 See manifest.json for per-file provenance, hashes and processing notes.
 Rebuild with scripts/prepare-sfx.py after extracting source archives to .cache/audio-sources/raw.
 
