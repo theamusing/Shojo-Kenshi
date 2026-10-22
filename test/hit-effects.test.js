@@ -13,7 +13,7 @@ function setup(facing = 1) {
   return { player, boss, effects };
 }
 
-test('real hits create a single directional burst at the overlap, including both combo strikes', () => {
+test('real hits create a single burst at the victim center, including both combo strikes', () => {
   for (const facing of [-1, 1]) {
     const { player, boss, effects } = setup(facing);
     player.machine.change('attack');
@@ -22,6 +22,8 @@ test('real hits create a single directional burst at the overlap, including both
     assert.equal(effects.hits.length, 1);
     const hit = effects.hits[0], hurt = getHurtbox(boss);
     assert.equal(hit.direction, facing);
+    assert.equal(hit.x, boss.x);
+    assert.ok(Math.abs(hit.y - (hurt.y + hurt.height / 2)) <= HIT_PIXEL / 2);
     assert.ok(hit.x >= hurt.x && hit.x <= hurt.x + hurt.width);
     assert.ok(hit.y >= hurt.y && hit.y <= hurt.y + hurt.height);
     assert.ok(hit.particles.reduce((sum, p) => sum + p.vx, 0) * facing > 0);
@@ -30,6 +32,32 @@ test('real hits create a single directional burst at the overlap, including both
     assert.ok(effects.hits[1].particles.length > hit.particles.length);
     assert.ok(effects.hits[1].reach > hit.reach);
   }
+});
+
+test('boss bursts are larger, predominantly exit away from the attacker, and dissipate quickly', () => {
+  for (const facing of [-1, 1]) {
+    const { player, boss, effects } = setup(facing);
+    effects.impact(player, boss); effects.impact(boss, player);
+    const [large, small] = effects.hits;
+    assert.ok(large.reach > small.reach); assert.ok(large.particles.length > small.particles.length);
+    const outgoing = large.rays.filter(ray => ray.dx * facing > 0);
+    const returning = large.rays.filter(ray => ray.dx * facing < 0);
+    assert.ok(outgoing.length >= returning.length * 3);
+    assert.ok(Math.min(...outgoing.map(ray => Math.abs(ray.dx))) > Math.max(...returning.map(ray => Math.abs(ray.dx))) * 2);
+    const forward = large.particles.filter(p => p.vx * facing > 0);
+    const backward = large.particles.filter(p => p.vx * facing < 0);
+    assert.ok(forward.length >= backward.length * 4);
+    assert.ok(Math.min(...forward.map(p => Math.abs(p.vx))) > Math.max(...backward.map(p => Math.abs(p.vx))) * 2);
+    effects.update(.3); assert.equal(effects.hits.length, 0);
+  }
+});
+
+test('particles with horizontal velocity never drop under gravity', () => {
+  const hit = { x: 200, y: 100, rays: [], particles: [
+    { vx: 800, vy: 0, drag: 2, life: .3, size: 2, trail: .02 },
+  ] };
+  const ctx = { save() {}, restore() {}, fillRect(x, y) { assert.equal(y, 100); } };
+  for (const age of [.05, .1, .2]) { hit.age = age; drawHitBursts(ctx, [hit]); }
 });
 
 test('misses and blocked hits do not create damage particles; unguarded player receives them', () => {

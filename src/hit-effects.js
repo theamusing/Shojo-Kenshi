@@ -1,33 +1,43 @@
 // Each source sprite pixel occupies a 2x2 cell on the game canvas.
+import { getHurtbox } from './combat.js';
+
 export const HIT_PIXEL = 2;
 const snap = v => Math.round(v / HIT_PIXEL) * HIT_PIXEL;
 
-export function createHitBurst(attacker, target, contact, random) {
+export function createHitBurst(attacker, target, random) {
   const direction = Math.sign(target.x - attacker.x) || attacker.facing;
   const heavy = attacker.machine.current === 'jump_attack';
   const second = attacker.kind === 'player' && attacker.attackStage === 2;
-  const duration = heavy ? .55 : .44;
-  const reach = heavy ? 96 : second ? 82 : 70;
-  let y = contact?.y ?? target.groundY - 60;
-  if (['down', 'up'].includes(target.machine.current)) y = Math.max(y, target.groundY - 44);
-  return { x: snap(contact?.x ?? target.x - direction * 16), y: snap(y),
+  const bossTarget = target.kind === 'boss', scale = bossTarget ? 1.5 : 1;
+  const duration = heavy ? .28 : .24;
+  const reach = (heavy ? 128 : second ? 124 : 110) * scale;
+  const body = getHurtbox(target);
+  let y = body.y + body.height / 2;
+  // Follow the lowered torso through kneeling/rising rather than its standing box.
+  if (bossTarget && target.machine.current === 'down') {
+    y += Math.min(1, target.animator.frame / 8) * 18 * target.scale;
+  } else if (bossTarget && target.machine.current === 'up') {
+    y += Math.max(0, 1 - target.animator.frame / 8) * 18 * target.scale;
+  }
+  return { x: snap(target.x), y: snap(y),
     direction, age: 0, duration, heavy, reach,
-    rays: Array.from({ length: 8 }, (_, i) => {
-      const forward = i < 5, index = forward ? i : i - 5;
-      const angle = (index - (forward ? 2 : 1)) * .19 + (random() - .5) * .08;
-      const central = index === (forward ? 2 : 1);
-      const length = reach * (central ? 1 : .52 + random() * .34) * (forward ? 1 : .55);
+    rays: Array.from({ length: 10 }, (_, i) => {
+      const forward = i < 8, index = forward ? i : i - 8;
+      const angle = (index - (forward ? 3.5 : .5)) * .085 + (random() - .5) * .05;
+      const central = forward && (index === 3 || index === 4);
+      const length = reach * (central ? 1 : .65 + random() * .35) * (forward ? 1 : .24);
       return { dx: direction * (forward ? 1 : -1) * length,
-        dy: Math.tan(angle) * length, width: central ? 7 : 3 + random() * 3 };
+        dy: Math.tan(angle) * length, width: (central ? 7 : 2 + random() * 3) * scale * (forward ? 1 : .45) };
     }),
-    particles: Array.from({ length: heavy ? 42 : second ? 34 : 28 }, (_, i) => {
-      // Mainly follow the blow, with a few fragments breaking back at the blade.
-      const angle = (random() - .5) * 1.1 + (i % 4 === 0 ? Math.PI : 0);
-      const speed = (180 + random() * 320) * (heavy ? 1.2 : 1);
-      return { vx: Math.cos(angle) * speed * direction, vy: Math.sin(angle) * speed - 15,
-        size: 1 + Math.floor(random() ** 2 * 4),
-        life: duration * (.55 + random() * .45), drag: 2.5 + random() * 2,
-        trail: .014 + random() * .02 };
+    particles: Array.from({ length: bossTarget ? (second ? 46 : 40) : (heavy ? 34 : 28) }, (_, i) => {
+      // About 85% exit behind the victim; the few returning flecks are short.
+      const forward = i % 7 !== 0;
+      const angle = (random() - .5) * .9 + (forward ? 0 : Math.PI);
+      const speed = (600 + random() * 480) * scale * (forward ? 1 : .27);
+      return { vx: Math.cos(angle) * speed * direction, vy: Math.sin(angle) * speed,
+        size: 1 + Math.floor(random() ** 2 * (bossTarget ? 5 : 4)),
+        life: duration * (.55 + random() * .45) * (forward ? 1 : .7), drag: 1.4 + random() * 1.2,
+        trail: .01 + random() * .015 };
     }),
   };
 }
@@ -66,8 +76,8 @@ export function drawHitBursts(ctx, hits, color = '#fff') {
   ctx.fillStyle = color;
   for (const hit of hits) {
     const { x, y, age } = hit;
-    if (age < .14) {
-      const strength = 1 - age / .14, extension = .8 + .2 * strength;
+    if (age < .11) {
+      const strength = 1 - age / .11, extension = .85 + .15 * strength;
       for (const ray of hit.rays) cone(ctx, x, y, ray.dx * extension, ray.dy * extension, ray.width * strength);
     }
     for (const p of hit.particles) {
@@ -75,8 +85,8 @@ export function drawHitBursts(ctx, hits, color = '#fff') {
       const t = age + .012, previous = Math.max(0, t - p.trail);
       const travel = (1 - Math.exp(-p.drag * t)) / p.drag;
       const oldTravel = (1 - Math.exp(-p.drag * previous)) / p.drag;
-      const px = snap(x + p.vx * travel), py = snap(y + p.vy * travel + 200 * t * t);
-      const tx = snap(x + p.vx * oldTravel), ty = snap(y + p.vy * oldTravel + 200 * previous * previous);
+      const px = snap(x + p.vx * travel), py = snap(y + p.vy * travel);
+      const tx = snap(x + p.vx * oldTravel), ty = snap(y + p.vy * oldTravel);
       const progress = age / p.life;
       // Keep a solid white (or execution-gray) color; shrink instead of fading.
       streak(ctx, tx, ty, px, py);

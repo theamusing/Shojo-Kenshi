@@ -25,9 +25,9 @@ export class CombatEffects {
   }
   clear() { this.bursts.length = 0; this.hits.length = 0; this.ripples.length = 0; this.shake = null; this.audio?.clearEffects(); }
   swing(actor) { this.audio?.swing(actor); }
-  impact(attacker, target, contact) {
+  impact(attacker, target) {
     this.audio?.impact(attacker, target);
-    this.hits.push(createHitBurst(attacker, target, contact, this.random));
+    this.hits.push(createHitBurst(attacker, target, this.random));
   }
   bossBlock(boss) { this.audio?.bossBlock(boss); this.clash(guardPoint(boss), 'block'); }
   parry(player, heavy = false, breaksPosture = false) {
