@@ -1,4 +1,6 @@
 ﻿// Sword contact points in source pixels relative to the actor's feet.
+import { createHitBurst, drawHitBursts } from './hit-effects.js';
+
 const GUARD_POINTS = {
   defend_1: [[18, -32], [-4, -47], [-12, -40], [-19, -31]],
   defend_2: [[16, -33], [10, -42], [6, -49], [5, -49]],
@@ -19,11 +21,14 @@ export function guardPoint(actor) {
 
 export class CombatEffects {
   constructor(random = Math.random, audio = null) {
-    this.random = random; this.audio = audio; this.bursts = []; this.ripples = []; this.shake = null;
+    this.random = random; this.audio = audio; this.bursts = []; this.hits = []; this.ripples = []; this.shake = null;
   }
-  clear() { this.bursts.length = 0; this.ripples.length = 0; this.shake = null; this.audio?.clearEffects(); }
+  clear() { this.bursts.length = 0; this.hits.length = 0; this.ripples.length = 0; this.shake = null; this.audio?.clearEffects(); }
   swing(actor) { this.audio?.swing(actor); }
-  impact(attacker, target) { this.audio?.impact(attacker, target); }
+  impact(attacker, target, contact) {
+    this.audio?.impact(attacker, target);
+    this.hits.push(createHitBurst(attacker, target, contact, this.random));
+  }
   bossBlock(boss) { this.audio?.bossBlock(boss); this.clash(guardPoint(boss), 'block'); }
   parry(player, heavy = false, breaksPosture = false) {
     this.audio?.parry(player, heavy, breaksPosture);
@@ -54,6 +59,8 @@ export class CombatEffects {
     this.bursts.push({ ...point, ...profile, style, age: 0, particles });
   }
   update(dt) {
+    for (const hit of this.hits) hit.age += dt;
+    this.hits = this.hits.filter(hit => hit.age < hit.duration);
     for (const burst of this.bursts) burst.age += dt;
     this.bursts = this.bursts.filter(burst => burst.age < burst.duration);
     for (const ripple of this.ripples) ripple.age += dt;
@@ -84,6 +91,7 @@ export class CombatEffects {
     }
   }
   draw(ctx) {
+    drawHitBursts(ctx, this.hits);
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     for (const burst of this.bursts) {

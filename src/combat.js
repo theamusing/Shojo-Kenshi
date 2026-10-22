@@ -64,7 +64,12 @@ export function resolveAttackHits(attacker, targets, frame = attacker.animator.f
   }
   for (const target of targets) {
     if (target.health <= 0 || target === attacker || target.previewing || struck.has(target)) continue;
-    if (overlaps(box, getHurtbox(target))) {
+    const hurtbox = getHurtbox(target);
+    if (overlaps(box, hurtbox)) {
+      const contact = {
+        x: (Math.max(box.x, hurtbox.x) + Math.min(box.x + box.width, hurtbox.x + hurtbox.width)) / 2,
+        y: (Math.max(box.y, hurtbox.y) + Math.min(box.y + box.height, hurtbox.y + hurtbox.height)) / 2,
+      };
       struck.add(target);
       if (attacker.kind === 'boss' && target.kind === 'player') {
         const heavy = attacker.machine.current === 'jump_attack';
@@ -77,7 +82,7 @@ export function resolveAttackHits(attacker, targets, frame = attacker.animator.f
           effects?.posture?.(attacker, postureGain);
         } else {
           target.receiveHit(attacker, heavy ? JUMP_KNOCKBACK_SPEED : undefined);
-          effects?.impact?.(attacker, target);
+          effects?.impact?.(attacker, target, contact);
           effects?.damage?.(target, BOSS_DAMAGE[attacker.machine.current]);
         }
       } else {
@@ -85,7 +90,7 @@ export function resolveAttackHits(attacker, targets, frame = attacker.animator.f
           effects?.bossBlock?.(target);
         } else {
           target.flashRemaining = HIT_FLASH_SECONDS;
-          effects?.impact?.(attacker, target);
+          effects?.impact?.(attacker, target, contact);
         }
         effects?.damage?.(target, attacker.attackStage === 2 ? 20 : 15);
       }
