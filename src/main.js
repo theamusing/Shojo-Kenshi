@@ -2,6 +2,7 @@
 import { Actor } from './actor.js';
 import { GAME_KEYS, KeyboardInput } from './input.js';
 import { drawHitboxes } from './combat.js';
+import { drawHitBursts } from './hit-effects.js';
 import { Duel, FINISHER } from './duel.js';
 import { loadProgress, saveProgress } from './progress.js';
 import { GameAudio } from './audio.js';
@@ -167,7 +168,7 @@ try {
     duel.update(dt, Math.sign(keyboard.direction + touchDirection), actions.filter(action => action !== 'toggleHitboxes'));
     drawStage(sceneContext, background, worldTime, Object.values(actors), false);
     for (const actor of drawOrder) actor.draw(sceneContext, images);
-    duel.effects.draw(sceneContext);
+    duel.effects.draw(sceneContext, { showHits: !duel.finisherActive });
     if (showHitboxes) drawHitboxes(sceneContext, drawOrder);
     const shake = reducedMotion.matches ? { x: 0, y: 0 } : duel.effects.cameraOffset;
     ctx.fillStyle = '#172a30'; ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -177,6 +178,7 @@ try {
       finisherContext.fillStyle = '#fff'; finisherContext.fillRect(0, 0, 960, 540);
       for (const actor of drawOrder) actor.draw(finisherContext, images, false, { silhouette: true });
       ctx.save(); ctx.globalAlpha = duel.finisherOpacity; ctx.drawImage(finisherScene, 0, 0); ctx.restore();
+      drawHitBursts(ctx, duel.effects.hits, '#999999');
     }
     updateHUD();
     requestAnimationFrame(frame);

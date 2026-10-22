@@ -28,7 +28,7 @@ test('real hits create a single directional burst at the overlap, including both
     player.startAttackSegment(2); resolveAttackHits(player, [boss], 13, effects);
     assert.equal(effects.hits.length, 2);
     assert.ok(effects.hits[1].particles.length > hit.particles.length);
-    assert.notEqual(effects.hits[1].slash, hit.slash);
+    assert.ok(effects.hits[1].reach > hit.reach);
   }
 });
 
@@ -67,4 +67,23 @@ test('pause freezes hit particles, reset clears them, and victory uses its slow-
   duel.setPaused(false); duel.update(.2);
   assert.ok(Math.abs(duel.effects.hits[0].age - .04) < 1e-8);
   duel.reset(); assert.equal(duel.effects.hits.length, 0);
+});
+
+test('horizontal cones and random-sized particles use only white or solid execution gray', () => {
+  const { player, boss } = setup();
+  let seed = 31;
+  const effects = new CombatEffects(() => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 2 ** 32; });
+  player.machine.change('attack'); resolveAttackHits(player, [boss], 5, effects);
+  const hit = effects.hits[0];
+  assert.ok(new Set(hit.particles.map(p => p.size)).size > 2);
+  assert.ok(hit.rays.every(ray => Math.abs(ray.dx) > Math.abs(ray.dy) * 2));
+  assert.ok(hit.rays.some(ray => ray.dx < 0) && hit.rays.some(ray => ray.dx > 0));
+  for (const color of ['#fff', '#999999']) {
+    let marks = 0;
+    const ctx = { save() {}, restore() {}, fillRect() {
+      assert.equal(this.fillStyle, color); assert.equal(this.globalAlpha, 1); marks++;
+    } };
+    for (const age of [0, .08, .2]) { hit.age = age; drawHitBursts(ctx, effects.hits, color); }
+    assert.ok(marks > 100);
+  }
 });

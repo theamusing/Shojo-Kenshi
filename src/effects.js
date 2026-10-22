@@ -90,8 +90,8 @@ export class CombatEffects {
       ctx.restore();
     }
   }
-  draw(ctx) {
-    drawHitBursts(ctx, this.hits);
+  draw(ctx, { showHits = true } = {}) {
+    if (showHits) drawHitBursts(ctx, this.hits);
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     for (const burst of this.bursts) {
