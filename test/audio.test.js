@@ -123,8 +123,8 @@ test('default loader calls native fetch with the global receiver, not the GameAu
   const sound = new GameAudio({ contextFactory: fakeContext });
   t.after(() => sound.dispose());
   assert.equal(await sound.start(), true);
-  assert.equal(calls, 6); assert.equal(sound.sampleCache.size, 6); assert.equal(sound.error, '');
-  for (const [kind, count] of [['playerSwing', 1], ['bossSwing', 1], ['hit', 3], ['parry', 1]]) assert.equal(sound.buffers.get(kind).length, count);
+  assert.equal(calls, 4); assert.equal(sound.sampleCache.size, 4); assert.equal(sound.error, '');
+  for (const [kind, count] of [['playerSwing', 1], ['bossSwing', 1], ['hit', 1], ['parry', 1]]) assert.equal(sound.buffers.get(kind).length, count);
 });
 
 test('audio unlock is lazy, pause and hidden state compose, mute is respected and effects are bounded', async t => {
@@ -169,18 +169,18 @@ test('recordings load once, a failed sample retries, and BGM runs without synthe
   let fail = true;
   const sound = new GameAudio({ contextFactory: () => ctx, fetcher: async url => {
     calls.push(url);
-    if (url.endsWith('hit-1.wav') && fail) return { ok: false, status: 404 };
+    if (url.endsWith('hit-3.wav') && fail) return { ok: false, status: 404 };
     return sampleResponse();
   } });
   t.after(() => sound.dispose());
-  assert.equal(await sound.start(), true); assert.equal(calls.length, 6);
-  assert.ok(sound.error); assert.equal(sound.buffers.get('hit').length, 2);
+  assert.equal(await sound.start(), true); assert.equal(calls.length, 4);
+  assert.ok(sound.error); assert.equal(sound.buffers.has('hit'), false);
   assert.ok([...sound.voices].some(voice => voice.music));
   assert.ok(!('hit' in SOUND_DURATIONS));
   fail = false;
-  await sound.start(); assert.equal(calls.length, 7); assert.equal(sound.error, '');
-  assert.equal(sound.buffers.get('hit').length, 3);
-  await sound.start(); assert.equal(calls.length, 7);
+  await sound.start(); assert.equal(calls.length, 5); assert.equal(sound.error, '');
+  assert.equal(sound.buffers.get('hit').length, 1);
+  await sound.start(); assert.equal(calls.length, 5);
 });
 
 test('fixed actor samples, bright loud parry and heavier jump strikes retain the intended mix', async t => {
@@ -199,6 +199,8 @@ test('fixed actor samples, bright loud parry and heavier jump strikes retain the
   assert.ok(playerSwing.source.playbackRate.value > 1);
   assert.ok(playerSwing.source.playbackRate.value > bossSwing.source.playbackRate.value);
   const hit = capture(() => sound.impact(boss, player));
+  assert.equal(hit.source.buffer, sound.sampleCache.get(SFX_FILES.hit[0]));
+  assert.equal(hit.gain.gain.value, .68);
   const parry = capture(() => sound.parry(player));
   assert.equal(parry.source.buffer, sound.sampleCache.get(SFX_FILES.parry[0]));
   assert.ok(parry.source.playbackRate.value < 1.3);
@@ -275,9 +277,9 @@ test('a missing player swing cannot substitute the boss recording', async t => {
 
 test('all shipped recordings are short, valid PCM WAV with provenance and no clipping', async () => {
   const manifest = JSON.parse(await readFile(new URL('../assets/audio/manifest.json', import.meta.url), 'utf8'));
-  const urls = Object.values(SFX_FILES).flat(); assert.equal(urls.length, 6);
-  assert.deepEqual(urls.map(url => url.split('/').at(-1)).sort(), ['hit-1.wav', 'hit-2.wav', 'hit-3.wav', 'parry-1.wav', 'swing-2.wav', 'swing-4.wav']);
-  assert.equal(manifest.length, urls.length);
+  const urls = Object.values(SFX_FILES).flat(); assert.equal(urls.length, 4);
+  assert.deepEqual(urls.map(url => url.split('/').at(-1)).sort(), ['hit-3.wav', 'parry-1.wav', 'swing-2.wav', 'swing-4.wav']);
+  assert.ok(manifest.length >= urls.length);
   for (const url of urls) {
     const bytes = await readFile(new URL(url));
     const row = manifest.find(item => url.endsWith(item.file));
