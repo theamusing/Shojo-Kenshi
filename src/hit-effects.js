@@ -11,6 +11,9 @@ export function createHitBurst(attacker, target, random) {
   const bossTarget = target.kind === 'boss', scale = bossTarget ? 1.5 : 1;
   const duration = heavy ? .40 : .36;
   const reach = (heavy ? 128 : second ? 124 : 110) * scale;
+  // Always one broad main spear and a short return; sometimes one fine accent.
+  const rayProfiles = [[1, -.04, 1, 11], [-1, -.08, .22, 2.5]];
+  if (random() < .5) rayProfiles.push([1, .20, .78, 2.5]);
   const body = getHurtbox(target);
   let y = body.y + body.height / 2;
   // Follow the lowered torso through kneeling/rising rather than its standing box.
@@ -21,19 +24,17 @@ export function createHitBurst(attacker, target, random) {
   }
   return { x: snap(target.x), y: snap(y),
     direction, age: 0, duration, heavy, reach,
-    rays: Array.from({ length: 5 }, (_, i) => {
-      const forward = i < 4;
-      // One broad spear, one medium wedge, two fine accents, one short back-spray.
-      const angle = [-.23, -.04, .14, .28, -.08][i] + (random() - .5) * .035;
-      const length = reach * [.82, 1, .72, .90, .22][i] * (.95 + random() * .05);
-      return { dx: direction * (forward ? 1 : -1) * length,
-        dy: Math.tan(angle) * length, width: [2, 11, 5.5, 1.5, 2.5][i] * scale };
+    rays: rayProfiles.map(([side, baseAngle, lengthScale, width]) => {
+      const angle = baseAngle + (random() - .5) * .035;
+      const length = reach * lengthScale * (.95 + random() * .05);
+      return { dx: direction * side * length,
+        dy: Math.tan(angle) * length, width: width * scale };
     }),
     particles: Array.from({ length: bossTarget ? (second ? 22 : 18) : (heavy ? 16 : 12) }, (_, i) => {
       // About 85% exit behind the victim; the few returning flecks are short.
       const forward = i % 7 !== 0;
       const angle = (random() - .5) * .9 + (forward ? 0 : Math.PI);
-      const speed = (420 + random() * 320) * scale * (forward ? 1 : .27);
+      const speed = (forward ? 220 + random() * 680 : 60 + random() * 80) * scale;
       const chunky = i % 3 === 0 || random() < .2;
       return { vx: Math.cos(angle) * speed * direction, vy: Math.sin(angle) * speed,
         size: chunky ? (bossTarget ? 4 : 3) + Math.floor(random() * 3) : 1 + Math.floor(random() * 2),
