@@ -90,6 +90,8 @@ test('random pitch stays in each sound range and musical voices keep their writt
 function fakeContext() {
   const param = () => ({ value: 1, events: [],
     setTargetAtTime(value, time, duration) { this.value = value; this.events.push({ value, time, duration }); },
+    setValueAtTime(value, time) { this.events.push({ value, time }); },
+    linearRampToValueAtTime(value, time) { this.events.push({ value, time, ramp: true }); },
     cancelScheduledValues() { this.events.length = 0; },
   });
   const node = extra => ({ connect() {}, disconnect() {}, ...extra });
@@ -105,7 +107,7 @@ function fakeContext() {
     createBuffer(channels, length) { const data = Array.from({ length: channels }, () => new Float32Array(length)); return { getChannelData: i => data[i] }; },
     decodeAudioData: async () => ({ recorded: true }),
     createBufferSource() {
-      const source = node({ playbackRate: param(), start(time) { this.time = time; }, stop() { this.stopped = true; } });
+      const source = node({ playbackRate: param(), start(time) { this.time = time; }, stop(time) { this.stopped = true; this.stopTime = time; } });
       this.sources.push(source); return source;
     },
   };
@@ -119,15 +121,24 @@ test('village battle music uses its own score, instruments and looping schedule'
   const pitched = new Set(['koto', 'shakuhachi', 'sho', 'strings', 'rin']);
   assert.ok(score.filter(e => pitched.has(e.kind)).every(e => [2, 3, 7, 9, 0].includes(e.note % 12)),
     'all melodic and pitched accompaniment notes must stay in D in-sen');
-  assert.ok(score.length > 400);
+  assert.ok(score.length > 200);
   assert.equal(new Set(score.filter(e => e.kind === 'taiko').map(e => Math.floor(e.beat / 4))).size, 32);
   assert.ok(score.every((event, i) => event.beat >= 0 && event.beat < MUSIC_TRACKS.ghost.beats
     && event.kind in SOUND_DURATIONS && Number.isFinite(event.note)
     && event.gain > 0 && (!i || event.beat >= score[i - 1].beat)));
+  const lead = score.filter(e => e.kind === 'shakuhachi' || (e.kind === 'koto' && e.gain > .15));
+  assert.ok(lead.every((event, i) => event.duration > 0
+    && (!i || lead[i - 1].beat + lead[i - 1].duration <= event.beat)), 'lead phrases must not overlap');
   const ctx = fakeContext();
   const sound = new GameAudio({ encounter: 'ghost', contextFactory: () => ctx, fetcher: sampleResponse });
   t.after(() => sound.dispose());
   assert.equal(await sound.start(), true);
+  assert.equal(sound.musicInput.gain.value, MUSIC_TRACKS.ghost.gain);
+  const noteStart = ctx.currentTime + 1;
+  sound.playBuffer('shakuhachi', noteStart, 1, .23, 0, true, .4);
+  const articulated = [...sound.voices].at(-1);
+  assert.equal(articulated.source.stopTime, noteStart + .4 + .04);
+  assert.ok(articulated.gain.gain.events.some(e => e.ramp && e.value === 0 && e.time === articulated.source.stopTime));
   for (const kind of ['shakuhachi', 'koto', 'sho', 'rin', 'taiko']) assert.ok(sound.buffers.has(kind));
   assert.equal(sound.buffers.has('flute'), false);
   const calls = []; sound.playBuffer = (...args) => calls.push(args);

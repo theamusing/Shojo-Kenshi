@@ -1,4 +1,15 @@
-Shojo Kenshi - recorded combat sound effects
+Shojo Kenshi - music and recorded combat sound effects
+
+VILLAGE BGM: Ghost Village / Yu Cun Can Di
+Locally synthesized instruments and battle arrangement in src/sound-design.js.
+Melodic reference: traditional Japanese "Sakura Sakura" (public-domain folk melody).
+Reference notation: Frank Nordberg's transcription in the John Chambers ABC collection:
+https://abcnotation.com/tunePage?a=trillian.mit.edu%2F~jc%2Fmusic%2Fabc%2Fmirror%2Fmusicaviva.com%2Fjapan%2Fsakura%2F0000
+The repeated calls, rising arches and descending cadences inform a new 16-bar
+phrase, recast in D/Eb/G/A/C with a new turnaround and battle percussion.
+No third-party recording, MIDI file or modern accompaniment is bundled.
+
+COMBAT SOUND EFFECTS
 Sources verified and downloaded: 2026-10-21
 
 The downloaded source packs below are published under CC0 1.0 Universal.

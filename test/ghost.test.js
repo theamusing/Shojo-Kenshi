@@ -623,7 +623,10 @@ test('shift can start attack 7 immediately at landing, with mist and no residual
     assert.equal(s.brain.invulnerable,false);assert.equal(s.brain.opacity,1);
     assert.equal(Math.sign(s.boss.x-px),px<480?1:-1);
     assert.equal(s.boss.facing,Math.sign(px-s.boss.x));assert.equal(s.effects.mists.length,2);
-    const start=s.boss.x;s.brain.update(1/12,s.effects);assert.equal(s.boss.x,start);
+    const start=s.boss.x,offsets=s.boss.animator.clip.rootXs;
+    assert.equal(s.brain.rootOffset,offsets[4]);
+    s.brain.update(1/12,s.effects);
+    assert.ok(Math.abs(s.boss.x-start-(offsets[5]-offsets[4])*s.boss.scale*s.boss.facing*.85)<1e-8);
   }
 });
 

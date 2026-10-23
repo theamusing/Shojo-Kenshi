@@ -2,7 +2,7 @@
 const TAU = Math.PI * 2;
 export const SOUND_DURATIONS = {
   taiko: 1.15, rim: .20, pluck: 1.4, flute: 1.4, strings: 1.6, gong: 2.8,
-  shakuhachi: 4.8, koto: 3.4, sho: 7.2, rin: 5.2,
+  shakuhachi: 4.8, koto: 3.4, sho: 5.4, rin: 5.2,
 };
 export const SFX_PITCH_RANGES = { swing: [-2, 2], hit: [4, 9], parry: [-1.2, 1.2] }; // semitone bounds
 export function pitchVariation(kind, random = Math.random) {
@@ -53,15 +53,15 @@ export function synthesize(kind, sampleRate, seed = 12345) {
       low += (n - low) * .075;
       const bend = -.65 * Math.exp(-t * 7) + .11 * Math.sin(TAU * 4.3 * t) * Math.min(1, t / .9);
       phase += TAU * 220 * 2 ** (bend / 12) / sampleRate;
-      value = (Math.sin(phase) + .24 * Math.sin(2 * phase) + .055 * Math.sin(3 * phase)
-        + low * .55) * Math.min(1, t / .22) * Math.exp(-t * .48)
+      value = (Math.sin(phase) + .40 * Math.sin(2 * phase) + .14 * Math.sin(3 * phase)
+        + .045 * Math.sin(4 * phase) + low * .38) * Math.min(1, t / .12) * Math.exp(-t * .60)
         * Math.min(1, (duration - t) / .8);
     } else if (kind === 'koto') {
       // Unequal harmonic decay and a restrained bridge buzz give the string texture.
       const bend = .025 * Math.exp(-t * 6);
       phase += TAU * 220 * (1 + bend) / sampleRate;
       for (let h = 1; h <= 8; h++) {
-        value += Math.sin(phase * h + .0015 * h * h * t) * Math.exp(-t * (.85 + h * .38)) / h;
+        value += Math.sin(phase * h + .0015 * h * h * t) * Math.exp(-t * (1.05 + h * .25)) / h ** .85;
       }
       value += .16 * n * Math.exp(-t * 70);
     } else if (kind === 'sho') {
@@ -96,49 +96,61 @@ export function synthesize(kind, sampleRate, seed = 12345) {
 export const MUSIC_BPM = 132;
 export const MUSIC_BEATS = 128; // 32 bars, about 58 seconds before the theme returns.
 export const MUSIC_TRACKS = {
-  samurai: { title: '月下交锋', bpm: MUSIC_BPM, beats: MUSIC_BEATS, roomSeconds: 1.2, wet: .18 },
-  ghost: { title: '幽村残笛', bpm: 124, beats: 128, roomSeconds: 2.4, wet: .24 },
+  samurai: { title: '月下交锋', bpm: MUSIC_BPM, beats: MUSIC_BEATS, roomSeconds: 1.2, wet: .18, gain: 1 },
+  ghost: { title: '幽村残笛', bpm: 124, beats: 128, roomSeconds: 1.8, wet: .16, gain: .96 },
 };
 
-// Original 32-bar battle theme in D in-sen (D, Eb, G, A, C).
-// Keep the first scene's drum drive and plucked motifs, with ghostly bamboo/reed answers.
+// Battle arrangement informed by the traditional Sakura melody's repeated calls,
+// arch-shaped phrases and descending cadences, recast in D/Eb/G/A/C.
+// Reference transcription and arrangement notes: assets/audio/CREDITS.txt.
 export function createGhostScore() {
   const events = [];
-  const add = (beat, kind, note, gain, pan = 0) => events.push({ beat, kind, note, gain, pan });
-  const motifs = [
-    [62, null, 69, 67, 63, null, 62, 57], [62, 63, 67, null, 69, 67, 63, null],
-    [60, null, 67, 69, 72, null, 69, 67], [69, 67, 63, null, 62, 57, 60, null],
-    [62, null, 63, 67, 69, null, 72, 69], [63, 67, 69, null, 75, 74, 72, 69],
-    [67, null, 69, 72, 74, 72, 69, 67], [63, 62, 57, null, 62, null, 57, null],
+  const add = (beat, kind, note, gain, pan = 0, duration) => events.push({ beat, kind, note, gain, pan, ...(duration ? { duration } : {}) });
+  // Beat, MIDI pitch, written length in beats. Repeated calls establish the tune;
+  // the middle descends to the lower register, then the call returns and resolves.
+  const melody = [
+    [[0, 67, .9], [1, 67, .9], [2, 69, 1.8]],
+    [[0, 67, .9], [1, 67, .9], [2, 69, 1.8]],
+    [[0, 67, .9], [1, 69, .9], [2, 72, .9], [3, 69, .9]],
+    [[0, 67, .9], [1, 69, .4], [1.5, 67, .4], [2, 63, 1.7]],
+    [[0, 62, .9], [1, 60, .9], [2, 62, .9], [3, 63, .9]],
+    [[0, 62, .9], [1, 62, .4], [1.5, 60, .4], [2, 57, 1.7]],
+    [[0, 67, .9], [1, 69, .9], [2, 72, .9], [3, 69, .9]],
+    [[0, 67, .9], [1, 69, .4], [1.5, 67, .4], [2, 63, 1.7]],
+    [[0, 62, .9], [1, 60, .9], [2, 62, .9], [3, 63, .9]],
+    [[0, 62, .9], [1, 62, .4], [1.5, 60, .4], [2, 57, 1.7]],
+    [[0, 67, .9], [1, 67, .9], [2, 69, 1.8]],
+    [[0, 67, .9], [1, 67, .9], [2, 69, 1.8]],
+    [[0, 60, .9], [1, 62, .9], [2, 63, 1.8]],
+    [[0, 69, 1.4], [1.5, 67, .4], [2, 63, .9], [3, 62, .9]],
+    [[0, 62, 2.7], [3, 57, .4], [3.5, 60, .4]],
+    [[0, 63, .9], [1, 62, 2.4]],
   ];
-  const roots = [50, 50, 48, 45, 50, 51, 55, 50];
-  // Written harmony stays inside D/Eb/G/A/C; a fixed +7 would introduce E and Bb.
-  const harmonies = [57, 57, 55, 50, 57, 55, 62, 57];
-  const fluteAnswers = [[69, 67], [72, 69], [74, 75], [67, 62]];
   for (let bar = 0; bar < 32; bar++) {
     const start = bar * 4, section = Math.floor(bar / 8), intense = section === 2;
-    const root = roots[bar % 8], harmony = harmonies[bar % 8], motif = motifs[bar % 8];
+    const fluteLead = section % 2 === 1;
     // Four-beat anchors and syncopated offbeats follow the samurai track's pulse.
     add(start, 'taiko', -2, .64, -.12);
     add(start + 2, 'taiko', -4, .48, .12);
-    add(start + 1.5, 'taiko', 2, .27, .2);
+    if (bar % 4 !== 3) add(start + 1.5, 'taiko', 2, .27, .2);
     if (bar % 2 || intense) add(start + 3.5, 'taiko', 0, .36, -.2);
-    for (const beat of [1, 2.5, 3]) add(start + beat, 'rim', -2, .12, .3);
-    if (bar % 4 === 3) for (const beat of [3.25, 3.5, 3.75]) add(start + beat, 'rim', 0, .12 + (beat - 3) * .07, -.3);
-    for (let eighth = 0; eighth < 8; eighth++) {
-      const note = motif[eighth];
-      if (note !== null) add(start + eighth / 2, 'koto', note, eighth % 2 ? .22 : .32, -.25);
-      if (eighth % 2 === 0 || intense) add(start + eighth / 2, 'strings', (eighth % 4 === 2 ? harmony : root) - 12, intense ? .13 : .095, .05);
+    for (const beat of [1, 3]) add(start + beat, 'rim', -2, .12, .3);
+    if (bar % 8 === 7) for (const beat of [3.5, 3.75]) add(start + beat, 'rim', 0, .14, -.3);
+    for (const [beat, note, duration] of melody[bar % 16]) {
+      add(start + beat, fluteLead ? 'shakuhachi' : 'koto', note,
+        (fluteLead ? .23 : .30) * (beat === 0 ? 1 : .88), fluteLead ? .16 : -.18, duration);
     }
-    // Distinct breathing phrases answer the koto rather than a continuous pad melody.
-    if (bar % 2 === 0 && (section > 0 || bar === 0 || bar === 4)) {
-      const answer = fluteAnswers[(bar % 8) / 2];
-      add(start + .25, 'shakuhachi', answer[0], intense ? .32 : .27, .24);
-      add(start + 2.75, 'shakuhachi', answer[1], .22, .2);
+    // The accompanying koto only marks the low pedal, never a competing melody.
+    if (fluteLead) {
+      add(start + .5, 'koto', 50, .09, -.25, .55);
+      add(start + 2.5, 'koto', 57, .075, -.25, .55);
     }
-    if (bar % 2 === 0) {
-      add(start, 'sho', root, .06, -.18);
-      add(start + .08, 'sho', harmony, .035, .24);
+    for (const beat of (intense ? [0, 1, 2, 3] : [0, 2])) {
+      add(start + beat, 'strings', beat === 2 ? 45 : 38, intense ? .12 : .10, .05, .7);
+    }
+    if (bar % 4 === 0) {
+      add(start, 'sho', 50, .035, -.18, 6);
+      add(start + .08, 'sho', 57, .02, .24, 6);
     }
     if (bar % 8 === 0) {
       add(start, 'gong', -3, .14);

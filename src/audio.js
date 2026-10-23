@@ -38,6 +38,7 @@ export class GameAudio {
     compressor.ratio.value = 8; compressor.attack.value = .003; compressor.release.value = .14;
     this.master.connect(compressor); compressor.connect(ctx.destination);
     this.musicInput = ctx.createGain(); this.musicInput.connect(this.music);
+    this.musicInput.gain.value = this.track.gain;
     const room = ctx.createConvolver(), wet = ctx.createGain(); wet.gain.value = this.track.wet;
     const impulse = ctx.createBuffer(2, Math.ceil(ctx.sampleRate * this.track.roomSeconds), ctx.sampleRate);
     for (let channel = 0; channel < 2; channel++) {
@@ -117,7 +118,7 @@ export class GameAudio {
   }
   setPaused(paused) { this.paused = paused; this.syncSuspension(); }
   setHidden(hidden) { this.hidden = hidden; this.syncSuspension(); }
-  playBuffer(kind, when, rate, volume, pan, music = false) {
+  playBuffer(kind, when, rate, volume, pan, music = false, duration = null) {
     const ctx = this.context, takes = this.buffers.get(kind);
     if (!ctx || !takes?.length || ctx.state !== 'running') return;
     // Bound overlapping effects without ever cutting a score voice for a sword swing.
@@ -143,6 +144,14 @@ export class GameAudio {
       source.disconnect(); gain.disconnect(); panner.disconnect(); this.voices.delete(voice);
     };
     source.start(when);
+    if (music && duration !== null) {
+      // Articulate written note lengths; samples must not blur into the next note.
+      const release = .04;
+      gain.gain.setValueAtTime(volume, when);
+      gain.gain.setValueAtTime(volume, when + duration);
+      gain.gain.linearRampToValueAtTime(0, when + duration + release);
+      source.stop(when + duration + release);
+    }
   }
   stopVoice(voice) {
     voice.source.stop(); voice.source.onended?.();
@@ -197,7 +206,8 @@ export class GameAudio {
       if (time > ctx.currentTime + .15) break;
       if (time >= ctx.currentTime - .025) {
         const rate = 2 ** ((event.note - (BASE_NOTES[event.kind] ?? 0)) / 12);
-        this.playBuffer(event.kind, Math.max(ctx.currentTime, time), rate, event.gain, event.pan, true);
+        this.playBuffer(event.kind, Math.max(ctx.currentTime, time), rate, event.gain, event.pan, true,
+          event.duration === undefined ? null : event.duration * beatSeconds);
       }
       if (++this.scoreIndex === this.score.length) { this.scoreIndex = 0; this.musicOrigin += loopSeconds; }
     }
