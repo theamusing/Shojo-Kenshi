@@ -5,7 +5,7 @@ export const BODY_BOXES = {
 };
 
 export function getBodyBox(actor) {
-  const body = BODY_BOXES[actor.kind];
+  const body = actor.bodyBox ?? BODY_BOXES[actor.kind];
   const width = body.width * actor.scale, height = body.height * actor.scale;
   return {
     x: actor.x - width / 2,
@@ -18,7 +18,7 @@ export function moveHorizontally(actor, distance, blockers = []) {
   const body = getBodyBox(actor);
   let nextX = Math.max(64, Math.min(896, actor.x + distance));
   for (const blocker of blockers) {
-    if (blocker === actor) continue;
+    if (blocker === actor || blocker.ghostBrain?.intangible) continue;
     const obstacle = getBodyBox(blocker);
     if (body.y >= obstacle.y + obstacle.height || body.y + body.height <= obstacle.y) continue;
     // Clamp the whole movement path, so even a long update cannot cross a body.

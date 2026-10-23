@@ -1,4 +1,5 @@
 import { getBodyBox } from './physics.js';
+import { GHOST_ATTACKS, GHOST_CONFIG, ghostStrikeId, isHeavyAttack } from './ghost-rules.js';
 
 // Boxes use source pixels relative to the actor's feet, facing right.
 // Body boxes exclude weapons; attack rectangles deliberately pad the blade.
@@ -34,10 +35,13 @@ export function worldBox(actor, box) {
     height: box.height * actor.scale,
   };
 }
-export function getHurtbox(actor) { return worldBox(actor, HURTBOXES[actor.kind]); }
+export function getHurtbox(actor) { return worldBox(actor, actor.hurtbox ?? HURTBOXES[actor.kind]); }
 export function getAttackBox(actor, frame = actor.animator.frame) {
   if (actor.health <= 0) return null;
   if (actor.kind === 'boss') {
+    if (actor.appearance === 'ghost') {
+      return ghostStrikeId(actor, frame) === undefined ? null : worldBox(actor, GHOST_ATTACKS[actor.machine.current].box);
+    }
     const box = BOSS_ATTACKBOXES[actor.machine.current]?.[frame];
     return box ? worldBox(actor, box) : null;
   }
@@ -49,7 +53,8 @@ export function overlaps(a, b) {
 }
 export function resolveAttackHits(attacker, targets, frame = attacker.animator.frame, effects = null) {
   if (attacker.health <= 0 || attacker.previewing || attacker.animator.paused || (attacker.kind === 'player' && attacker.attackStage === null)) return;
-  if (attacker.attackRecoveryFrame === null && SWING_FRAMES[attacker.machine.current]?.includes(frame)
+  const swings = attacker.appearance === 'ghost' ? GHOST_ATTACKS[attacker.machine.current]?.swings : SWING_FRAMES[attacker.machine.current];
+  if (attacker.attackRecoveryFrame === null && swings?.includes(frame)
     && !attacker.swingFrames.has(frame)) {
     attacker.swingFrames.add(frame);
     effects?.swing?.(attacker);
@@ -59,30 +64,35 @@ export function resolveAttackHits(attacker, targets, frame = attacker.animator.f
   // Boss attack 2 has two independent strikes; each may hit/block once.
   let struck = attacker.hitTargets;
   if (attacker.kind === 'boss') {
-    if (!attacker.strikeTargets.has(frame)) attacker.strikeTargets.set(frame, new Set());
-    struck = attacker.strikeTargets.get(frame);
+    const strike = attacker.appearance === 'ghost' ? ghostStrikeId(attacker, frame) : frame;
+    if (!attacker.strikeTargets.has(strike)) attacker.strikeTargets.set(strike, new Set());
+    struck = attacker.strikeTargets.get(strike);
   }
   for (const target of targets) {
-    if (target.health <= 0 || target === attacker || target.previewing || struck.has(target)) continue;
+    if (target.health <= 0 || target === attacker || target.previewing || target.ghostBrain?.invulnerable || struck.has(target)) continue;
     const hurtbox = getHurtbox(target);
     if (overlaps(box, hurtbox)) {
       struck.add(target);
       if (attacker.kind === 'boss' && target.kind === 'player') {
-        const heavy = attacker.machine.current === 'jump_attack';
+        const heavy = isHeavyAttack(attacker);
+        const ghostAttack = attacker.appearance === 'ghost' ? GHOST_ATTACKS[attacker.machine.current] : null;
         if (target.isGuarding) {
-          const postureGain = heavy ? 10 : 5;
+          target.facing = Math.sign(attacker.x - target.x) || -attacker.facing;
+          const postureGain = ghostAttack
+            ? (heavy ? GHOST_CONFIG.heavyParryPosture : GHOST_CONFIG.parryPosture)
+            : (heavy ? 10 : 5);
           const breaksPosture = Number.isFinite(attacker.maxPosture) && attacker.posture + postureGain >= attacker.maxPosture;
           effects?.parry(target, heavy, breaksPosture);
           if (heavy) target.receiveGuardImpact(attacker, JUMP_KNOCKBACK_SPEED);
-          else target.receiveGuardRecoil(attacker);
+          else target.receiveGuardRecoil(attacker, ghostAttack?.guardRecoilSpeed);
           effects?.posture?.(attacker, postureGain);
         } else {
-          target.receiveHit(attacker, heavy ? JUMP_KNOCKBACK_SPEED : undefined);
+          target.receiveHit(attacker, heavy ? JUMP_KNOCKBACK_SPEED : ghostAttack?.knockbackSpeed);
           effects?.impact?.(attacker, target);
-          effects?.damage?.(target, BOSS_DAMAGE[attacker.machine.current]);
+          effects?.damage?.(target, attacker.appearance === 'ghost' ? GHOST_ATTACKS[attacker.machine.current].damage : BOSS_DAMAGE[attacker.machine.current]);
         }
       } else {
-        if (target.kind === 'boss' && target.machine.current === 'defend') {
+        if (target.kind === 'boss' && target.appearance !== 'ghost' && target.machine.current === 'defend') {
           effects?.bossBlock?.(target);
         } else {
           target.flashRemaining = HIT_FLASH_SECONDS;

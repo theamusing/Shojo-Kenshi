@@ -6,7 +6,36 @@ const clip = (file, frames, options = {}) => ({
   ...options,
 });
 const bossAttack = (name, frames) => clip(name, frames, { width: 192, height: 192, anchorY: 171 });
+// Compensate most authored body travel so world motion and collision stay together.
+const ghostClip = (file, frames, options = {}) => clip(file, frames, { anchorY: 99, ...options });
+const ghostAttack = (number, frames, width, height, bodyCenters) => ghostClip(`ghost_attack_${number}`, frames, {
+  width, height, anchorY: height === 192 ? 163 : 99,
+  // Extract authored travel into world position for 1/5/7/10. The matching anchor
+  // preserves the original sheet's complete visual displacement, without a second lunge.
+  rootXs: [1, 5, 7, 10].includes(number) ? bodyCenters.map(x => x - bodyCenters[0]) : undefined,
+  anchorXs: bodyCenters?.map(x => 64 + ([1, 5, 7, 9, 10].includes(number) ? x - bodyCenters[0] : Math.round((x - 65) * .75))),
+});
 export const ANIMATIONS = {
+  ghost: {
+    idle: clip('ghost_idle', 12, { loop: true, fps: 8, anchorY: 99 }),
+    run: clip('ghost_walk', 8, { loop: true, fps: 8, anchorY: 99, groundY: [99, 100, 100, 100, 100, 100, 99, 99] }),
+    attack_1: { ...ghostAttack(1, 20, 192, 192, [65,67,68,69,68,65,64,63,61,60,59,59,69,86,88,87,87,85,84,82,80,78,74]), sourceFrames: 23 },
+    attack_2: ghostAttack(2, 17, 128, 128),
+    attack_3: ghostAttack(3, 24, 128, 128),
+    attack_4: ghostAttack(4, 24, 192, 128, [65,66,65,65,66,69,71,87,86,86,82,78,76,70,70,75,79,84,90,95,93,90,86,83]),
+    attack_5: { ...ghostAttack(5, 24, 192, 128, [65,64,64,63,61,61,61,62,61,62,62,63,65,68,72,75,82,83,81,79,76,73,70,66,65,65,65,65,65,65]), sourceFrames: 30 },
+    attack_6: ghostAttack(6, 9, 192, 128, [68,69,68,68,72,77,91,94,91]),
+    attack_7: { ...ghostAttack(7, 28, 192, 192, [65,65,65,63,63,63,63,64,65,67,70,76,81,88,87,85,86,86,91,94,97,98,99,102,110,110,109,107,107]), sourceFrames: 29 },
+    attack_9: ghostAttack(9, 19, 192, 128, [65,67,70,80,80,80,81,81,81,81,82,82,82,82,81,80,78,73,68]),
+    attack_10: ghostAttack(10, 27, 128, 128, [66,66,67,68,70,71,71,70,68,67,67,67,68,68,67,63,61,60,60,60,61,62,70,70,69,67,67]),
+    float: ghostClip('ghost_float', 21),
+    shift: ghostClip('ghost_shift', 19),
+    defend: ghostClip('ghost_defend', 13),
+    // Keep the first frame's vertical origin through falling, holding and rising.
+    down: ghostClip('ghost_down', 8),
+    up: ghostClip('ghost_up', 9),
+    defeated: ghostClip('ghost_down', 8),
+  },
   player: {
     idle: clip('player_idle', 12, { loop: true }),
     run: clip('player_run', 8, { loop: true, groundY: [91, 91, 91, 91, 91, 91, 91, 89] }),
@@ -45,6 +74,7 @@ export class Animator {
     if (!this.clips[name]) throw new Error(`Unknown animation: ${name}`);
     if (!Number.isInteger(startFrame) || !Number.isInteger(endFrame) || startFrame < 0 || endFrame >= this.clips[name].frames || startFrame > endFrame) throw new Error('Invalid animation frame range');
     if (this.name === name && !restart) return;
+    this.playbackVersion = (this.playbackVersion ?? 0) + 1;
     this.name = name;
     this.clip = this.clips[name];
     this.fps = this.clip.fps;
@@ -63,9 +93,13 @@ export class Animator {
     if (!count) return 0;
     // Notify every entered frame, including active frames skipped by a slow render.
     if (onFrame) {
+      const playbackVersion = this.playbackVersion;
       const steps = this.loop ? count : Math.min(count, this.endFrame - this.frame);
       for (let step = 1; step <= steps; step++) {
         onFrame(this.startFrame + (this.frame - this.startFrame + step) % (this.endFrame - this.startFrame + 1));
+        // A parry can replace this animation inside its hit callback.
+        // Do not advance the replacement with the old animation's frame count.
+        if (this.playbackVersion !== playbackVersion) return 0;
       }
     }
     if (!this.loop && this.frame + count > this.endFrame) {
@@ -91,12 +125,12 @@ export class Animator {
     const c = this.clip;
     return { x: (this.frame % c.columns) * c.width, y: Math.floor(this.frame / c.columns) * c.height, width: c.width, height: c.height };
   }
-  get anchor() { return { x: this.clip.anchorX, y: this.clip.groundY?.[this.frame] ?? this.clip.anchorY }; }
+  get anchor() { return { x: this.clip.anchorXs?.[this.frame] ?? this.clip.anchorX, y: this.clip.groundY?.[this.frame] ?? this.clip.anchorY }; }
 }
 
-export async function loadSprites() {
+export async function loadSprites(sets = Object.values(ANIMATIONS)) {
   const images = new Map();
-  await Promise.all(Object.values(ANIMATIONS).flatMap(Object.values).map(async clip => {
+  await Promise.all(sets.flatMap(Object.values).map(async clip => {
     const img = new Image();
     img.src = clip.url;
     await new Promise((resolve, reject) => {

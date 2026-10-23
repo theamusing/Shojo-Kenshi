@@ -25,6 +25,8 @@
         <span id="difficulty-badge" class="difficulty-badge" aria-label="困难模式" hidden>难</span>
       </div>
     </div>
+    <div id="scene-caption" class="scene-caption" hidden><span>雾 隐 幽 村</span><small>水声不歇，故人未归</small></div>
+    <div id="boss-debug" class="boss-debug" hidden role="status"></div>
     <div id="instructions" class="instructions"><p><kbd>A</kbd> <kbd>D</kbd> 移动 <span>·</span> <kbd>J</kbd> 攻击 <span>·</span> <kbd>K</kbd> 格挡</p><small>再次按 J 连段 · Esc 暂停 · H 判定框</small></div>
     <button id="pause-button" class="pause-button" aria-label="暂停游戏">Ⅱ</button>
     <div class="touch-controls" id="touch-controls" aria-label="触屏操作">
@@ -39,13 +41,17 @@
         <label>音效<input id="effects-volume" type="range" min="0" max="100" value="85"></label>
         <button id="audio-mute" aria-pressed="false">静音</button>
       </div>
+      <div class="scene-settings">
+        <label for="scene-select">场景</label>
+        <select id="scene-select"><option value="ghost">雾隐幽村 · 怨影</option><option value="samurai">月下山寺 · 红盔武士</option></select>
+      </div>
       <div class="difficulty-settings">
         <label for="difficulty-select">难度</label>
         <select id="difficulty-select"><option value="normal">普通</option><option value="hard" id="hard-option" disabled>困难 · 尚未解锁</option></select>
         <span id="difficulty-hint">击败红盔武士解锁困难模式</span>
       </div>
       <div class="menu-actions"><button id="continue-game" class="primary">继续交锋</button><button id="restart-game">重新开始</button></div>
-      <p class="subtle">切换难度后点击重新开始 · Esc 继续当前战斗</p>
+      <p id="pause-hint" class="subtle">切换难度后点击重新开始 · Esc 继续当前战斗</p>
     </div>
     <div id="death-overlay" class="screen death-screen" hidden role="dialog" aria-labelledby="death-title">
       <h1 id="death-title">死</h1><p class="eyebrow">败于此刻，再战此地</p><button id="death-restart" class="restart">点击任意位置或按任意键重新开始</button>

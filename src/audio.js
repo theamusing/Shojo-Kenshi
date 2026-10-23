@@ -1,7 +1,8 @@
-import { SOUND_DURATIONS, synthesize, pitchVariation, createScore, MUSIC_BPM, MUSIC_BEATS } from './sound-design.js';
+import { synthesize, pitchVariation, createScore, createGhostScore, MUSIC_TRACKS } from './sound-design.js';
+import { isHeavyAttack } from './ghost-rules.js';
 
 const clamp = value => Math.max(0, Math.min(1, Number(value) || 0));
-const BASE_NOTES = { pluck: 57, flute: 69, strings: 45 };
+const BASE_NOTES = { pluck: 57, flute: 69, strings: 45, shakuhachi: 57, koto: 57, sho: 57, rin: 69 };
 export const SFX_FILES = Object.fromEntries(Object.entries({
   playerSwing: ['player-swing.wav'], bossSwing: ['boss-swing.wav'],
   hit: ['hit.wav'], parry: ['parry.wav'],
@@ -17,12 +18,14 @@ export class GameAudio {
   constructor({ contextFactory = () => {
     const AudioContext = globalThis.AudioContext || globalThis.webkitAudioContext;
     return AudioContext ? new AudioContext() : null;
-  }, random = Math.random, fetcher = (...args) => globalThis.fetch(...args) } = {}) {
+  }, random = Math.random, fetcher = (...args) => globalThis.fetch(...args), encounter = 'samurai' } = {}) {
     this.contextFactory = contextFactory; this.random = random;
     this.fetcher = fetcher; this.sampleCache = new Map(); this.effectsLoading = null; this.lastTake = new Map();
     this.context = null; this.paused = false; this.hidden = false; this.muted = false;
     this.musicVolume = .32; this.effectsVolume = .85;
-    this.voices = new Set(); this.buffers = new Map(); this.score = createScore();
+    this.track = MUSIC_TRACKS[encounter] ?? MUSIC_TRACKS.samurai;
+    this.voices = new Set(); this.buffers = new Map();
+    this.score = encounter === 'ghost' ? createGhostScore() : createScore();
     this.timer = null; this.error = ''; this.started = false;
   }
   buildGraph() {
@@ -35,15 +38,15 @@ export class GameAudio {
     compressor.ratio.value = 8; compressor.attack.value = .003; compressor.release.value = .14;
     this.master.connect(compressor); compressor.connect(ctx.destination);
     this.musicInput = ctx.createGain(); this.musicInput.connect(this.music);
-    const room = ctx.createConvolver(), wet = ctx.createGain(); wet.gain.value = .18;
-    const impulse = ctx.createBuffer(2, Math.ceil(ctx.sampleRate * 1.2), ctx.sampleRate);
+    const room = ctx.createConvolver(), wet = ctx.createGain(); wet.gain.value = this.track.wet;
+    const impulse = ctx.createBuffer(2, Math.ceil(ctx.sampleRate * this.track.roomSeconds), ctx.sampleRate);
     for (let channel = 0; channel < 2; channel++) {
       const data = impulse.getChannelData(channel);
       for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length) ** 3;
     }
     room.buffer = impulse; this.musicInput.connect(room); room.connect(wet); wet.connect(this.music);
-    for (const kind of Object.keys(SOUND_DURATIONS)) {
-      // Keep the original BGM instruments; combat sounds are decoded recordings.
+    for (const kind of new Set(this.score.map(event => event.kind))) {
+      // Only synthesize this scene's instruments; combat sounds are decoded recordings.
       const samples = synthesize(kind, ctx.sampleRate);
       const buffer = ctx.createBuffer(1, samples.length, ctx.sampleRate);
       buffer.getChannelData(0).set(samples);
@@ -174,8 +177,8 @@ export class GameAudio {
       this.duck.gain.setTargetAtTime(1, ctx.currentTime + .13, .12);
     }
   }
-  swing(actor) { this.effect(actor.kind === 'boss' ? 'bossSwing' : 'playerSwing', actor.x, actor.machine?.current === 'jump_attack'); }
-  impact(attacker, target) { this.effect('hit', target.x, attacker.machine.current === 'jump_attack'); }
+  swing(actor) { this.effect(actor.kind === 'boss' ? 'bossSwing' : 'playerSwing', actor.x, isHeavyAttack(actor)); }
+  impact(attacker, target) { this.effect('hit', target.x, isHeavyAttack(attacker)); }
   parry(player, heavy = false, breaksPosture = false) {
     this.effect('parry', player.x, heavy, { gainScale: breaksPosture ? 1.3 : 1 });
   }
@@ -183,7 +186,7 @@ export class GameAudio {
   scheduleMusic() {
     const ctx = this.context;
     if (!ctx || ctx.state !== 'running' || this.paused || this.hidden) return;
-    const beatSeconds = 60 / MUSIC_BPM, loopSeconds = MUSIC_BEATS * beatSeconds;
+    const beatSeconds = 60 / this.track.bpm, loopSeconds = this.track.beats * beatSeconds;
     // A stalled tab skips missed notes instead of replaying a burst on return.
     if (ctx.currentTime - this.musicOrigin >= loopSeconds) {
       this.musicOrigin += Math.floor((ctx.currentTime - this.musicOrigin) / loopSeconds) * loopSeconds;

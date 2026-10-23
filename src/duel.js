@@ -6,19 +6,26 @@ export const DIFFICULTIES = {
   normal: { bossHealth: 600, posture: 60 },
   hard: { bossHealth: 1000, posture: 80 },
 };
+export const GHOST_DIFFICULTIES = {
+  normal: { bossHealth: 600, posture: 60 },
+  hard: { bossHealth: 800, posture: 80 },
+};
 export const ROUND_RULES = { playerHealth: 100, downSeconds: 3, defendDamageMultiplier: .3, introSeconds: 3, deathSpeed: .25 };
 export const FINISHER = { duration: .65, speed: .2, fadeSeconds: .15 };
 
 export class Duel {
   constructor(player, boss, { audio = null, introDuration = ROUND_RULES.introSeconds,
-    difficulty = 'normal', hardUnlocked = false, onUnlock = () => {}, ...options } = {}) {
+    difficulty = 'normal', hardUnlocked = false, onUnlock = () => {},
+    brainClass = BossBrain, practice = false, unlockHard = true, ...options } = {}) {
     this.player = player; this.boss = boss; this.audio = audio;
     this.hardUnlocked = hardUnlocked === true;
     this.difficulty = difficulty === 'hard' && this.hardUnlocked ? 'hard' : 'normal';
     this.onUnlock = onUnlock;
     this.introDuration = introDuration;
     this.spawns = [player, boss].map(actor => ({ x: actor.x, facing: actor.facing }));
-    this.brain = new BossBrain(boss, player, options);
+    this.practice = practice;
+    this.unlockHard = unlockHard;
+    this.brain = new brainClass(boss, player, options);
     this.effects = new CombatEffects(Math.random, audio);
     // Commit outcomes after animation updates, never inside their frame callbacks.
     this.events = [];
@@ -28,6 +35,7 @@ export class Duel {
     this.reset();
   }
   get canRestart() { return this.phase === 'dead' || this.phase === 'won'; }
+  get downSeconds() { return this.brain.downSeconds ?? ROUND_RULES.downSeconds; }
   get noDamage() { return this.damageTaken === 0; }
   get finisherActive() { return this.phase === 'victory' && this.endTime < FINISHER.duration; }
   get finisherOpacity() { return this.finisherActive ? Math.min(1, (FINISHER.duration - this.endTime) / FINISHER.fadeSeconds) : 0; }
@@ -35,7 +43,7 @@ export class Duel {
   reset(difficulty = this.difficulty) {
     if (!Object.hasOwn(DIFFICULTIES, difficulty) || (difficulty === 'hard' && !this.hardUnlocked)) return false;
     this.difficulty = difficulty;
-    const rules = DIFFICULTIES[difficulty];
+    const rules = (this.boss.appearance === 'ghost' ? GHOST_DIFFICULTIES : DIFFICULTIES)[difficulty];
     [this.player, this.boss].forEach((actor, i) => {
       actor.x = this.spawns[i].x; actor.facing = this.spawns[i].facing; actor.resume();
       actor.maxHealth = i === 0 ? ROUND_RULES.playerHealth : rules.bossHealth;
@@ -51,6 +59,8 @@ export class Duel {
     return true;
   }
   applyEvents() {
+    // Movement previews retain sword feedback without entering unfinished combat states.
+    if (this.practice) { this.events.length = 0; return; }
     for (const event of this.events.splice(0)) {
       if (this.phase !== 'playing') break;
       const { target, amount } = event;
@@ -61,15 +71,19 @@ export class Duel {
           target.machine.change('down', true);
           this.effects.postureBreak(target);
           this.brain.defensePending = false;
-          this.downRemaining = ROUND_RULES.downSeconds;
+          this.brain.onStagger?.();
+          this.downRemaining = this.downSeconds;
         }
       } else {
-        const multiplier = target === this.boss && target.machine.current === 'defend' ? ROUND_RULES.defendDamageMultiplier : 1;
+        const multiplier = target === this.boss && target.appearance !== 'ghost' && target.machine.current === 'defend' ? ROUND_RULES.defendDamageMultiplier : 1;
         const damage = Math.min(target.health, amount * multiplier);
         target.health = Math.max(0, target.health - damage);
         if (target === this.player) this.damageTaken += damage;
         if (target.health > 0) {
-          if (target === this.boss && damage > 0 && this.introRemaining <= 0) this.brain.reactToHit();
+          if (target === this.boss && damage > 0) {
+            if (this.introRemaining > 0 && this.brain.onOpeningHit?.()) this.introRemaining = 0;
+            else if (this.introRemaining <= 0) this.brain.reactToHit();
+          }
           continue;
         }
         this.endTime = 0;
@@ -89,7 +103,7 @@ export class Duel {
       const heldTime = boss.animator.finished ? dt : boss.animator.update(dt);
       if (boss.animator.finished) {
         this.downRemaining = Math.max(0, this.downRemaining - heldTime);
-        boss.posture = boss.maxPosture * this.downRemaining / ROUND_RULES.downSeconds;
+        boss.posture = boss.maxPosture * this.downRemaining / this.downSeconds;
         if (this.downRemaining <= 1e-9) { boss.posture = 0; boss.machine.change('up'); }
       }
     } else if (boss.machine.current === 'up') {
@@ -122,7 +136,7 @@ export class Duel {
       this.boss.animator.update(victoryTime); this.effects.update(victoryTime);
       if (this.boss.animator.finished) {
         this.phase = 'won';
-        if (!this.hardUnlocked) {
+        if (!this.hardUnlocked && this.unlockHard) {
           this.hardUnlocked = true; this.newUnlock = true; this.onUnlock(this);
         }
       }
@@ -142,7 +156,12 @@ export class Duel {
       this.player.update(slice, direction, [], this.targets, this.effects);
       this.applyEvents();
       if (this.phase === 'playing') { this.updateBoss(slice); this.applyEvents(); }
+      const wasIntro = this.introRemaining > 0;
       this.introRemaining = Math.max(0, this.introRemaining - slice);
+      if (wasIntro && this.introRemaining <= 1e-9) {
+        this.introRemaining = 0;
+        if (this.phase === 'playing') this.brain.onIntroEnd?.();
+      }
       remaining -= slice;
     }
   }

@@ -1,5 +1,6 @@
 // Each source sprite pixel occupies a 2x2 cell on the game canvas.
 import { getHurtbox } from './combat.js';
+import { isHeavyAttack } from './ghost-rules.js';
 
 export const HIT_PIXEL = 2;
 const BLADE_FLASH_SECONDS = .20;
@@ -35,7 +36,7 @@ export function drawHitEmissionRings(ctx, actors) {
 
 export function createHitBurst(attacker, target, random) {
   const direction = Math.sign(target.x - attacker.x) || attacker.facing;
-  const heavy = attacker.machine.current === 'jump_attack';
+  const heavy = isHeavyAttack(attacker);
   const second = attacker.kind === 'player' && attacker.attackStage === 2;
   const bossTarget = target.kind === 'boss', scale = bossTarget ? 1.5 : 1;
   const duration = heavy ? .29 : .26;

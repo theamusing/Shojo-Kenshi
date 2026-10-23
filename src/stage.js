@@ -1,4 +1,5 @@
-export const GROUND_Y = 420;
+// Shared actor baseline, 8 world pixels below the path's rear edge.
+export const GROUND_Y = 428;
 
 // A low-resolution painted backdrop, enlarged with nearest-neighbor sampling.
 export function createStage() {

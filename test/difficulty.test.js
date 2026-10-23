@@ -4,6 +4,7 @@ import { Actor } from '../src/actor.js';
 import { Duel } from '../src/duel.js';
 import { resolveAttackHits } from '../src/combat.js';
 import { loadProgress, saveProgress } from '../src/progress.js';
+import { GhostBrain } from '../src/ghost.js';
 
 const setup = options => new Duel(new Actor('player', 260, 420), new Actor('boss', 340, 420, -1), { random: () => .99, ...options });
 
@@ -31,6 +32,31 @@ test('death does not unlock hard mode', () => {
   const duel = setup();
   duel.effects.damage(duel.player, 100); duel.applyEvents(); duel.update(3);
   assert.equal(duel.phase, 'dead'); assert.equal(duel.hardUnlocked, false);
+});
+
+test('ghost unlock and selected difficulty persist independently of existing samurai progress', () => {
+  const values=new Map(),storage={getItem:key=>values.get(key)??null,setItem:(key,value)=>values.set(key,value)};
+  saveProgress({hardUnlocked:true,difficulty:'hard'},storage);
+  const oldSamurai=values.get('shojo-progress');
+  assert.deepEqual(loadProgress(storage,'ghost'),{hardUnlocked:false,difficulty:'normal'});
+  const duel=new Duel(new Actor('player',260,428),new Actor('boss',704,428,-1,'ghost'),{
+    brainClass:GhostBrain,...loadProgress(storage,'ghost'),onUnlock:progress=>saveProgress(progress,storage,'ghost'),random:()=>.99,
+  });
+  assert.equal(duel.reset('hard'),false);
+  duel.effects.damage(duel.boss,600);duel.applyEvents();
+  assert.equal(loadProgress(storage,'ghost').hardUnlocked,false);
+  duel.update(4);assert.equal(loadProgress(storage,'ghost').hardUnlocked,true);
+  duel.reset('hard');saveProgress(duel,storage,'ghost');
+  assert.deepEqual(loadProgress(storage,'ghost'),{hardUnlocked:true,difficulty:'hard'});
+  assert.equal(values.get('shojo-progress'),oldSamurai);
+  const reloaded=new Duel(new Actor('player',260,428),new Actor('boss',704,428,-1,'ghost'),{
+    brainClass:GhostBrain,...loadProgress(storage,'ghost'),random:()=>.99,
+  });
+  assert.equal(reloaded.boss.health,800);assert.equal(reloaded.boss.maxPosture,80);
+  assert.equal(reloaded.downSeconds,2);
+  saveProgress({hardUnlocked:false,difficulty:'hard'},storage,'ghost');
+  assert.deepEqual(loadProgress(storage,'ghost'),{hardUnlocked:false,difficulty:'normal'});
+  assert.equal(loadProgress(storage).difficulty,'hard');
 });
 
 test('posture-breaking parries enhance feedback once in either difficulty and recover the correct bar', () => {

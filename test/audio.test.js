@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { GameAudio, SFX_FILES } from '../src/audio.js';
 import { readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
-import { SOUND_DURATIONS, SFX_PITCH_RANGES, synthesize, pitchVariation, createScore, MUSIC_BEATS } from '../src/sound-design.js';
+import { SOUND_DURATIONS, SFX_PITCH_RANGES, synthesize, pitchVariation, createScore, createGhostScore, MUSIC_TRACKS, MUSIC_BEATS } from '../src/sound-design.js';
 import { Actor } from '../src/actor.js';
 import { BossBrain } from '../src/boss.js';
 import { CombatEffects } from '../src/effects.js';
@@ -112,6 +112,35 @@ function fakeContext() {
   return ctx;
 }
 const sampleResponse = async () => ({ ok: true, arrayBuffer: async () => new ArrayBuffer(4) });
+
+test('village battle music uses its own score, instruments and looping schedule', async t => {
+  const score = createGhostScore();
+  assert.notDeepEqual(score, createScore());
+  const pitched = new Set(['koto', 'shakuhachi', 'sho', 'strings', 'rin']);
+  assert.ok(score.filter(e => pitched.has(e.kind)).every(e => [2, 3, 7, 9, 0].includes(e.note % 12)),
+    'all melodic and pitched accompaniment notes must stay in D in-sen');
+  assert.ok(score.length > 400);
+  assert.equal(new Set(score.filter(e => e.kind === 'taiko').map(e => Math.floor(e.beat / 4))).size, 32);
+  assert.ok(score.every((event, i) => event.beat >= 0 && event.beat < MUSIC_TRACKS.ghost.beats
+    && event.kind in SOUND_DURATIONS && Number.isFinite(event.note)
+    && event.gain > 0 && (!i || event.beat >= score[i - 1].beat)));
+  const ctx = fakeContext();
+  const sound = new GameAudio({ encounter: 'ghost', contextFactory: () => ctx, fetcher: sampleResponse });
+  t.after(() => sound.dispose());
+  assert.equal(await sound.start(), true);
+  for (const kind of ['shakuhachi', 'koto', 'sho', 'rin', 'taiko']) assert.ok(sound.buffers.has(kind));
+  assert.equal(sound.buffers.has('flute'), false);
+  const calls = []; sound.playBuffer = (...args) => calls.push(args);
+  const origin = sound.musicOrigin, loop = 60 / sound.track.bpm * sound.track.beats;
+  for (let time = .1; time < loop + .3; time += .05) {
+    ctx.currentTime = time; sound.scheduleMusic();
+  }
+  assert.ok(Math.abs(sound.musicOrigin - origin - loop) < 1e-8);
+  assert.equal(calls.filter(([kind, when]) => kind === 'sho' && Math.abs(when - (origin + loop)) < 1e-8).length, 1);
+  assert.ok(calls.every(([, when, rate]) => Number.isFinite(when) && rate > 0));
+  sound.setPaused(true); const count = calls.length; sound.scheduleMusic(); assert.equal(calls.length, count);
+  const samurai = new GameAudio(); assert.equal(samurai.track.bpm, 132); assert.deepEqual(samurai.score, createScore());
+});
 
 test('default loader calls native fetch with the global receiver, not the GameAudio instance', async t => {
   let calls = 0;

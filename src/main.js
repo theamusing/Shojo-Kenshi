@@ -1,5 +1,6 @@
 ﻿import { loadSprites } from './animations.js';
 import { Actor } from './actor.js';
+import { ANIMATIONS } from './animations.js';
 import { GAME_KEYS, KeyboardInput } from './input.js';
 import { drawHitboxes } from './combat.js';
 import { drawHitBursts, drawHitEmissionRings } from './hit-effects.js';
@@ -7,18 +8,44 @@ import { Duel, FINISHER } from './duel.js';
 import { loadProgress, saveProgress } from './progress.js';
 import { GameAudio } from './audio.js';
 import { GROUND_Y, createStage, drawStage } from './stage.js';
+import { createVillageStage, drawVillageStage, drawVillageForeground } from './village-stage.js';
+import { GhostBrain } from './ghost.js';
 
 const $ = id => document.getElementById(id);
 const canvas = $('game'), ctx = canvas.getContext('2d');
-const actors = { player: new Actor('player', 260, GROUND_Y), boss: new Actor('boss', 704, GROUND_Y, -1) };
-const background = createStage(), keyboard = new KeyboardInput(), touches = new Map();
+const isGhost = new URLSearchParams(location.search).get('encounter') !== 'samurai';
+const encounter = isGhost ? 'ghost' : 'samurai';
+const persistProgress = progress => saveProgress(progress, undefined, encounter);
+const actors = { player: new Actor('player', 260, GROUND_Y), boss: new Actor('boss', 704, GROUND_Y, -1, isGhost ? 'ghost' : 'boss') };
+const background = isGhost ? createVillageStage() : createStage(), keyboard = new KeyboardInput(), touches = new Map();
 const scene = document.createElement('canvas'); scene.width = 960; scene.height = 540;
 const finisherScene = document.createElement('canvas'); finisherScene.width = 960; finisherScene.height = 540;
 const finisherContext = finisherScene.getContext('2d');
 const sceneContext = scene.getContext('2d'), reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 const drawOrder = [actors.boss, actors.player];
-const sound = new GameAudio();
-export const duel = new Duel(actors.player, actors.boss, { audio: sound, ...loadProgress(), onUnlock: saveProgress });
+const sound = new GameAudio({ encounter });
+export const duel = new Duel(actors.player, actors.boss, { audio: sound, ...loadProgress(undefined, encounter), onUnlock: persistProgress,
+  ...(isGhost ? { brainClass: GhostBrain } : {}) });
+document.title = isGhost ? '少女剑士 · 雾隐幽村' : '少女剑士 · 月下山寺';
+$('stage').classList.toggle('ghost-scene', isGhost);
+$('stage').setAttribute('aria-label', isGhost ? '雾隐幽村' : '月下山寺');
+$('loading').textContent = isGhost ? '正在进入幽村…' : '正在进入山寺…';
+$('scene-select').value = isGhost ? 'ghost' : 'samurai';
+$('scene-caption').hidden = true;
+if (isGhost) {
+  document.querySelector('#pause-overlay .eyebrow').textContent = '雾 隐 幽 村';
+  $('continue-game').textContent = '回到幽村';
+  $('pause-hint').textContent = 'Esc 返回 · H 查看怨影的动作与特殊窗口';
+  document.querySelector('.boss-heading .fighter-name').textContent = '幽村怨影';
+  $('boss-health').setAttribute('aria-label', '幽村怨影生命');
+  $('boss-posture').setAttribute('aria-label', '幽村怨影韧性');
+  document.querySelector('#victory-overlay .eyebrow').textContent = '雾 隐 幽 村';
+  document.querySelector('#instructions small').textContent = 'Esc 暂停／切换场景 · H 判定框';
+}
+$('scene-select').addEventListener('change', () => {
+  const url = new URL(location.href); url.searchParams.set('encounter', $('scene-select').value);
+  location.assign(url.href);
+});
 let lastTime = null, worldTime = 0, showHitboxes = false, ready = false, lastPhase = '';
 const isEditing = target => target instanceof Element && !!target.closest('input, select, textarea');
 
@@ -50,7 +77,7 @@ function updateDifficultySettings() {
   $('hard-option').disabled = !duel.hardUnlocked;
   $('hard-option').textContent = duel.hardUnlocked ? '困难' : '困难 · 尚未解锁';
   $('difficulty-select').value = duel.difficulty;
-  $('difficulty-hint').textContent = duel.hardUnlocked ? '困难模式已解锁' : '击败红盔武士解锁困难模式';
+  $('difficulty-hint').textContent = duel.hardUnlocked ? '困难模式已解锁' : `击败${isGhost ? '幽村怨影' : '红盔武士'}解锁困难模式`;
 }
 function setGamePaused(paused) {
   duel.setPaused(paused); clearInput(); lastTime = null;
@@ -61,7 +88,7 @@ function setGamePaused(paused) {
 }
 function reset(difficulty = duel.difficulty) {
   if (!duel.reset(difficulty)) return;
-  clearInput(); saveProgress(duel); worldTime = 0; lastTime = null; lastPhase = '';
+  clearInput(); persistProgress(duel); worldTime = 0; lastTime = null; lastPhase = '';
   $('pause-overlay').hidden = true; $('touch-controls').inert = false;
   updateHUD(); canvas.focus(); unlockAudio();
 }
@@ -119,6 +146,24 @@ window.addEventListener('pageshow', visibility);
 sound.setHidden(document.hidden);
 
 function updateHUD() {
+  $('boss-debug').hidden = !showHitboxes;
+  if (showHitboxes) {
+    const boss = actors.boss, brain = duel.brain, frame = boss.animator.frame + 1;
+    const action = boss.machine.current;
+    const names = { idle: '待机', run: brain.moveMode === 'retreat' ? '向后漫游' : '向前移动', float: '虚影闪身', shift: '雾隐', defend: '弹反架势', down: '韧性崩溃', up: '起身', defeated: '战败' };
+    const move = brain.isDodging ? '后撤反击' : names[action] ?? `攻击 ${action.replace('attack_', '')}`;
+    const combo = brain.combo?.length ? `${brain.comboIndex + 1}/${brain.combo.length}（${brain.combo.map(s => s.replace('attack_', '')).join(' → ')}）` : '无';
+    const ghostDetails = isGhost ? [
+      `连招：${combo}　距离：${Math.round(brain.distance)}`,
+      `播放区间：${boss.animator.startFrame + 1}～${boss.animator.endFrame + 1} 帧`,
+      `无敌：${brain.invulnerable ? '是' : '否'}`,
+      ...(action === 'attack_9' ? [`突刺：${brain.thrustRecovering ? '命中／格挡后收招' : '向前冲刺，单次伤害'}`] : []),
+      ...(brain.shiftPending ? ['雾隐：已决定，整套连段结束后发动'] : []),
+      action === 'shift' ? `${brain.isDodging ? '闪身' : '雾隐'}：${{ dodge: '平地后撤，准备攻击 3', vanish: '消散中', hidden: '隐身等待', appear: '重新凝聚' }[brain.shiftPhase] ?? '准备'}${brain.shiftPhase === 'hidden' ? ` · ${brain.shiftRemaining.toFixed(2)}s` : ''}`
+        : `决策：${{ opening: '开场待机', teleport: '雾隐转位', shiftAttack: `雾隐落地，立即攻击 ${action.replace('attack_', '')}`, dodge: '受击闪身，准备反击', dodgeCounter: '闪身后攻击 3', approachAttack: '中距离发动攻击 7', combo: '近战连段', single: '独立招式', roam: '漫游', recover: '收招后短暂休息／漫游' }[brain.reason] ?? '待机'}`,
+    ] : [`移动意图：${brain.moveMode === 'retreat' ? '后退' : '接近'}`, `距玩家：${Math.round(Math.abs(boss.x - actors.player.x))}`];
+    $('boss-debug').textContent = [`${isGhost ? '幽村怨影' : '红盔武士'} · ${move}`, `帧：${frame}/${boss.animator.clip.frames}　${boss.animator.fps} fps`, ...ghostDetails].join('\n');
+  }
   for (const [id, actor] of [['player', actors.player], ['boss', actors.boss]]) {
     $(`${id}-health-fill`).style.transform = `scaleX(${actor.health / actor.maxHealth})`;
     $(`${id}-health`).setAttribute('aria-valuenow', String(actor.health));
@@ -156,7 +201,7 @@ function updateHUD() {
 }
 updateHUD();
 try {
-  const images = await loadSprites();
+  const images = await loadSprites([ANIMATIONS.player, ANIMATIONS[isGhost ? 'ghost' : 'boss']]);
   $('loading').hidden = true; ready = true;
   function frame(now) {
     const dt = lastTime === null || document.hidden ? 0 : Math.min((now - lastTime) / 1000, .1);
@@ -166,9 +211,11 @@ try {
     const actions = keyboard.consumeActions();
     if (actions.includes('toggleHitboxes')) showHitboxes = !showHitboxes;
     duel.update(dt, Math.sign(keyboard.direction + touchDirection), actions.filter(action => action !== 'toggleHitboxes'));
-    drawStage(sceneContext, background, worldTime, Object.values(actors), false);
+    (isGhost ? drawVillageStage : drawStage)(sceneContext, background, worldTime, Object.values(actors), false);
+    duel.effects.drawAfterimages(sceneContext, images);
     for (const actor of drawOrder) actor.draw(sceneContext, images);
     duel.effects.draw(sceneContext, { showHits: !duel.finisherActive });
+    if (isGhost) drawVillageForeground(sceneContext, worldTime);
     if (showHitboxes) {
       drawHitboxes(sceneContext, drawOrder);
       drawHitEmissionRings(sceneContext, drawOrder);
@@ -179,6 +226,7 @@ try {
     ctx.drawImage(scene, 0, 0); duel.effects.drawRipples(ctx, scene); ctx.restore();
     if (duel.finisherActive) {
       finisherContext.fillStyle = '#fff'; finisherContext.fillRect(0, 0, 960, 540);
+      duel.effects.drawAfterimages(finisherContext, images, true);
       for (const actor of drawOrder) actor.draw(finisherContext, images, false, { silhouette: true });
       ctx.save(); ctx.globalAlpha = duel.finisherOpacity; ctx.drawImage(finisherScene, 0, 0); ctx.restore();
       drawHitBursts(ctx, duel.effects.hits, '#999999');

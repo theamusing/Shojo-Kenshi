@@ -18,14 +18,19 @@ export class StateMachine {
 }
 
 export class Actor {
-  constructor(kind, x, groundY, facing = 1) {
+  constructor(kind, x, groundY, facing = 1, appearance = kind) {
     this.kind = kind;
+    this.appearance = appearance;
+    if (appearance === 'ghost') {
+      this.bodyBox = { width: 24, height: 70 };
+      this.hurtbox = { x: -14, y: -70, width: 28, height: 70 };
+    }
     this.x = x;
     this.groundY = groundY;
     this.facing = facing;
     this.speed = kind === 'boss' ? 96 : 160;
     this.scale = 2;
-    this.renderOffsetY = kind === 'boss' ? 1 : 0;
+    this.renderOffsetY = appearance === 'boss' ? 1 : 0;
     this.previewing = false;
     this.attackStage = null;
     this.attackRecoveryFrame = null;
@@ -36,8 +41,8 @@ export class Actor {
     this.flashRemaining = 0;
     this.knockbackVelocity = 0;
     this.knockbackRemaining = 0;
-    this.animator = new Animator(ANIMATIONS[kind]);
-    const states = Object.fromEntries(Object.keys(ANIMATIONS[kind]).map(name => [name, {
+    this.animator = new Animator(ANIMATIONS[appearance]);
+    const states = Object.fromEntries(Object.keys(ANIMATIONS[appearance]).map(name => [name, {
       enter: () => {
         this.strikeTargets.clear();
         this.swingFrames.clear();
@@ -109,10 +114,10 @@ export class Actor {
     this.knockbackVelocity = -this.facing * knockbackSpeed;
     this.knockbackRemaining = 8 / 12;
   }
-  receiveGuardRecoil(attacker) {
+  receiveGuardRecoil(attacker, knockbackSpeed = 180) {
     if (this.kind !== 'player' || !this.isGuarding) return;
     const away = Math.sign(this.x - attacker.x) || attacker.facing;
-    this.knockbackVelocity = away * 180;
+    this.knockbackVelocity = away * knockbackSpeed;
     // Keep the original guard window; recoil never restarts or extends it.
     this.knockbackRemaining = Math.min(.2,
       (this.animator.endFrame - this.animator.frame + 1) / this.animator.fps - this.animator.elapsed);
@@ -186,7 +191,7 @@ export class Actor {
         && ((this.animator.frame >= 4 && this.animator.frame <= 6)
           || (this.animator.frame >= 11 && this.animator.frame <= 13))) {
         resolveAttackHits(this, targets, this.animator.frame, effects);
-        moveHorizontally(this, this.facing * ATTACK_STEP_SPEED * slice, targets);
+        if (this.machine.current === 'attack') moveHorizontally(this, this.facing * ATTACK_STEP_SPEED * slice, targets);
       }
       this.machine.update(slice, direction);
       resolveAttackHits(this, targets, this.animator.frame, effects);
@@ -209,6 +214,10 @@ export class Actor {
     ctx.translate(Math.round(this.x), this.groundY + this.renderOffsetY * scale - this.elevation);
     ctx.scale(this.facing * scale, scale);
     ctx.imageSmoothingEnabled = false;
+    if (this.ghostBrain) {
+      ctx.globalAlpha *= this.ghostBrain.opacity;
+      if (this.ghostBrain.invulnerable) ctx.filter = 'saturate(0.12)';
+    }
     if (silhouette) ctx.filter = this.kind === 'player' ? 'brightness(0)' : 'brightness(0) invert(0.45)';
     else if (this.kind === 'boss' && this.machine.current === 'defeated') ctx.filter = 'saturate(0.15)';
     const sprite = !silhouette && this.flashRemaining > 0 ? images.get(`${animator.clip.url}#white`) ?? images.get(animator.clip.url) : images.get(animator.clip.url);

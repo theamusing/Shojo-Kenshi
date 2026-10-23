@@ -1,5 +1,6 @@
 ﻿// Sword contact points in source pixels relative to the actor's feet.
 import { createHitBurst, drawHitBursts } from './hit-effects.js';
+import { createGhostMist, drawGhostMist, createGhostAfterimage, drawGhostAfterimages } from './ghost-effects.js';
 
 const GUARD_POINTS = {
   defend_1: [[18, -32], [-4, -47], [-12, -40], [-19, -31]],
@@ -21,9 +22,12 @@ export function guardPoint(actor) {
 
 export class CombatEffects {
   constructor(random = Math.random, audio = null) {
-    this.random = random; this.audio = audio; this.bursts = []; this.hits = []; this.ripples = []; this.shake = null;
+    this.random = random; this.audio = audio; this.bursts = []; this.hits = []; this.ripples = []; this.mists = []; this.afterimages = []; this.shake = null;
   }
-  clear() { this.bursts.length = 0; this.hits.length = 0; this.ripples.length = 0; this.shake = null; this.audio?.clearEffects(); }
+  clear() { this.bursts.length = 0; this.hits.length = 0; this.ripples.length = 0; this.mists.length = 0; this.afterimages.length = 0; this.shake = null; this.audio?.clearEffects(); }
+  ghostAfterimage(actor) { this.afterimages.push(createGhostAfterimage(actor)); }
+  drawAfterimages(ctx, images, silhouette = false) { drawGhostAfterimages(ctx, this.afterimages, images, silhouette); }
+  ghostMist(actor, appearing) { this.mists.push(createGhostMist(actor, appearing, this.random)); }
   swing(actor) { this.audio?.swing(actor); }
   impact(attacker, target) {
     this.audio?.impact(attacker, target);
@@ -59,6 +63,10 @@ export class CombatEffects {
     this.bursts.push({ ...point, ...profile, style, age: 0, particles });
   }
   update(dt) {
+    for (const trail of this.afterimages) trail.age += dt;
+    this.afterimages = this.afterimages.filter(trail => trail.age < trail.duration);
+    for (const mist of this.mists) mist.age += dt;
+    this.mists = this.mists.filter(mist => mist.age < mist.duration);
     for (const hit of this.hits) hit.age += dt;
     this.hits = this.hits.filter(hit => hit.age < hit.duration);
     for (const burst of this.bursts) burst.age += dt;
@@ -91,6 +99,7 @@ export class CombatEffects {
     }
   }
   draw(ctx, { showHits = true } = {}) {
+    drawGhostMist(ctx, this.mists);
     if (showHits) drawHitBursts(ctx, this.hits);
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
